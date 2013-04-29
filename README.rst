@@ -105,8 +105,8 @@ TODO
 
 Should be able to choose from a few specialisations of STD streams: read-only, read-write,
 binary and seekable. Read-only and read-write cannot be tested for at run-time, so 
-specialisations will need to be chosen at run-time. Making a template that can decide this
-automatically is no doubt possible, but is beyond my level of knowledge of C++ atm.
+specialisations will need to be chosen at compile-time. Making a template that can decide 
+this automatically is no doubt possible, but is beyond my current level of knowledge of C++.
 
 Not only that, but it needs to be finished, wrt. tp_hash, etc.
 
