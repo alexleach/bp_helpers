@@ -37,18 +37,18 @@ Contents
 
 a. Header Files
 
-  - buffer_pointer_converter.hpp
+- buffer_pointer_converter.hpp
 Defines a return_value_policy where an iostream can be exposed like a Python buffer
 
-  - return_buffer_object.hpp
+- return_buffer_object.hpp
 Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
 PyBufferProcs struct.
 
 b. And their corresponding source files:-
 
-  - buffer_pointer_converter.cpp
+- buffer_pointer_converter.cpp
 
-  - return_buffer_object.cpp
+- return_buffer_object.cpp
 
 2. Exposing std::list
 ---------------------
