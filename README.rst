@@ -31,7 +31,7 @@ before running tests on the exposed interfaces.
 Contents
 --------
 
-* Exposing C++ STL iostream's
+* Exposing C++ STL iostream's *
 
   * buffer_pointer_converter.hpp
   Defines a return_value_policy where an iostream can be exposed like a Python buffer
@@ -43,9 +43,10 @@ Contents
 And their corresponding source files:-
 
   * buffer_pointer_converter.cpp
+
   * return_buffer_object.cpp
 
-* Exposing std::list
+* Exposing std::list *
 
   * make_list.hpp
   Wraps std::list
@@ -54,13 +55,13 @@ And their corresponding source files:-
   Code to help call a Python function from C++ (in sort).
   Probably duplicated functionality...
 
-* Thread safety
+* Thread safety *
 
   * make_threadsafe.hpp
   RAII for Python GIL and ThreadState
 
 
-* Misc
+* Misc *
 
   * converters.hpp
   Some converters used to get a 'const char* const*' from various Python objects
@@ -83,8 +84,10 @@ Unit Tests
 ----------
 
   * tests/test_buffer_object.py
+
   * tests/test_make_list.py
+
   * tests/test_refcounted_object.py
 
-Each unittest can be run directly, which will compile only the relevant C++ code and
-run only the relevant tests.
+Each unittest can be run directly, using Python. This will compile the relevant C++ code,
+before proceding to run the unittests.
