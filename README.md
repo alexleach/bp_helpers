@@ -24,7 +24,7 @@ or test it after playing around with it, you can just run the Makefile,
 which will compile every C++ test file in src/tests/, by running a relevant 
 Python unit-test module.
 
-The Python unittests are provided in the tests/ directory. Each unittest
+The Python unittests are provided in the `tests/` directory. Each unittest
 module is configured to compile the relevant C++ code, using Python's distutils, 
 before running tests on the exposed interfaces.
 
@@ -32,55 +32,56 @@ before running tests on the exposed interfaces.
 Contents
 ========
 
-1. Exposing C++ STL iostream's
-------------------------------
+Exposing C++ STL iostream's
+---------------------------
 
-i. Header Files
+1. Header Files:-
+ - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
 
-  - buffer_pointer_converter.hpp
-Defines a return_value_policy where an iostream can be exposed like a Python buffer
+   Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
+   conforming to Python's [old style buffer objects][1].
 
-  - return_buffer_object.hpp
-Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
-PyBufferProcs struct.
+ - `return_buffer_object.hpp`
 
-ii. And their corresponding source files:-
+   Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
+   PyBufferProcs struct.
 
-  - buffer_pointer_converter.cpp
-  - return_buffer_object.cpp
+2. And their corresponding source files:-
+  * `buffer.cpp`
+  * `return_buffer_object.cpp`
 
 
-2. Exposing std::list
----------------------
+Exposing std::list
+------------------
 
 - make_list.hpp
-Wraps std::list
+  Wraps std::list
 
 - make_callback.hpp
-Code to help call a Python function from C++ (in sort).
-Probably duplicated functionality...
+  Code to help call a Python function from C++ (in sort).
+  Probably duplicated functionality...
 
 
 3. Thread safety
 ----------------
 
 - make_threadsafe.hpp
-RAII for Python GIL and ThreadState
+  RAII for Python GIL and ThreadState
 
 
 4. Misc
 -------
 
 - converters.hpp
-Some converters used to get a 'const char* const*' from various Python objects
+  Some converters used to get a 'const char* const*' from various Python objects
 
 - get_object_id.hpp
-Get internal ID of python object, like id(obj) does, from python. I think this is 
-already available in Boost Python, so should probably delete this and figure out 
-how to use that instead.
+  Get internal ID of python object, like id(obj) does, from python. I think this is 
+  already available in Boost Python, so should probably delete this and figure out 
+  how to use that instead.
 
 - make_constructor.hpp
-Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
+  Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
 
 - make_submodules.hpp
 Macros to call multiple Boost Python registration functions, within a module scope
@@ -101,16 +102,24 @@ before proceding to run the unittests.
 TODO
 ====
 
-- Buffer_pointer_convert.hpp
+- buffer.hpp
 
 Should be able to choose from a few specialisations of STD streams: read-only, read-write,
 binary and seekable. Read-only and read-write cannot be tested for at run-time, so 
 specialisations will need to be chosen at compile-time. Making a template that can decide 
 this automatically is no doubt possible, but is beyond my current level of knowledge of C++.
 
-Not only that, but it needs to be finished, wrt. tp_hash, etc.
+Not only that, but the PyTypeObject underlying the buffer template is still missing an
+implementation of the built-in function: `tp_hash`.
+
+The PyBufferProcs object still needs working `segcountproc`, and `charbufferproc`
+implementations.
+
 
 - test_all.py
 
 Should probably write a global unittest file, instead of using a Makefile. This should make
 everything here properly platform independent.
+
+[1]: http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
+[buffer.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp
