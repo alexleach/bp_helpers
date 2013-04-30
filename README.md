@@ -37,28 +37,30 @@ before running tests on the exposed interfaces.
 ===============================
 
 1. Header Files:-
-  - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
+  - [buffer.hpp]
 
     Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
     conforming to Python's ["old style buffer object"s][1].
 
- - `return_buffer_object.hpp`
+ - [return_buffer_object.hpp]
 
     Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
     PyBufferProcs struct.
 
 2. And their corresponding source files:-
-  - `buffer.cpp`
-  - `return_buffer_object.cpp`
+  - [buffer.cpp]
+  - [return_buffer_object.cpp]
 
 
 ### Exposing std::list
 ======================
 
-- make_list.hpp
+- [make_list.hpp]
+
   Wraps std::list
 
-- make_callback.hpp
+- [make_callback.hpp]
+
   Code to help call a Python function from C++ (in sort).
   Probably duplicated functionality...
 
@@ -66,36 +68,42 @@ before running tests on the exposed interfaces.
 ### Thread safety
 =================
 
-- make_threadsafe.hpp
+- [make_threadsafe.hpp]
+
   RAII for Python GIL and ThreadState
 
 
 ### Misc
 ========
 
-- converters.hpp
+- [converters.hpp]
+
   Some converters used to get a 'const char* const*' from various Python objects
 
-- get_object_id.hpp
+- [get_object_id.hpp]
+
   Get internal ID of python object, like id(obj) does, from python. I think this is 
   already available in Boost Python, so should probably delete this and figure out 
   how to use that instead.
 
-- make_constructor.hpp
+- [make_constructor.hpp]
+
   Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
 
-- make_submodules.hpp
+- [make_submodules.hpp]
+
   Macros to call multiple Boost Python registration functions, within a module scope
 
-- refcounted_object.hpp
+- [refcounted_object.hpp]
+
   This was inspired from somewhere. Don't actually use it currently..
 
 ### Unit Tests
 ==============
 
-- tests/test_buffer_object.py
-- tests/test_make_list.py
-- tests/test_refcounted_object.py
+- [tests/test_buffer_object.py]
+- [tests/test_make_list.py]
+- [tests/test_refcounted_object.py]
 
 Each unittest can be run directly, using Python. This will compile the relevant C++ code,
 before proceding to run the unittests.
@@ -103,7 +111,7 @@ before proceding to run the unittests.
 ### TODO
 ========
 
-- buffer.hpp
+- [buffer.hpp]
 
 Should be able to choose from a few specialisations of STD streams: read-only, read-write,
 binary and seekable. Read-only and read-write cannot be tested for at run-time, so 
@@ -123,4 +131,23 @@ Should probably write a global unittest file, instead of using a Makefile. This 
 everything here properly platform independent.
 
 [1]: http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
+
 [buffer.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp
+[converters.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/converters.hpp
+[get_object_id.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/get_object_id.hpp
+[return_buffer_object.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/return_buffer_object.hpp
+[refcounted_object.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/refcounted_object.hpp
+[make_constructor.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/make_constructor.hpp
+[make_submodules.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/make_submodules.hpp
+
+[buffer.cpp]: https://github.com/alexleach/bp_helpers/blob/master/src/buffer.cpp
+[return_buffer_object.cpp]: https://github.com/alexleach/bp_helpers/blob/master/src/return_buffer_object.cpp
+[make_list.hpp]: https://github.com/alexleach/bp_helpers/blob/master/src/make_list.cpp
+[make_callback.hpp]: https://github.com/alexleach/bp_helpers/blob/master/src/make_callback.cpp
+
+[tests/test_buffer_object.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_buffer_object.py
+[tests/test_make_list.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_make_list.py
+[tests/test_refcounted_object.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_refcounted_object.py
+
+
+
