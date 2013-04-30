@@ -37,8 +37,9 @@ Contents
 
 i. Header Files
 
-  - buffer_pointer_converter.hpp
-Defines a return_value_policy where an iostream can be exposed like a Python buffer
+  - buffer.hpp
+Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
+conforming to Python's ["old-style buffer object"](http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects).
 
   - return_buffer_object.hpp
 Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
@@ -46,7 +47,7 @@ PyBufferProcs struct.
 
 ii. And their corresponding source files:-
 
-  - buffer_pointer_converter.cpp
+  - buffer.cpp
   - return_buffer_object.cpp
 
 
@@ -101,16 +102,23 @@ before proceding to run the unittests.
 TODO
 ====
 
-- Buffer_pointer_convert.hpp
+- buffer.hpp
 
 Should be able to choose from a few specialisations of STD streams: read-only, read-write,
 binary and seekable. Read-only and read-write cannot be tested for at run-time, so 
 specialisations will need to be chosen at compile-time. Making a template that can decide 
 this automatically is no doubt possible, but is beyond my current level of knowledge of C++.
 
-Not only that, but it needs to be finished, wrt. tp_hash, etc.
+Not only that, but the PyTypeObject underlying the buffer template is still missing an
+implementation of the built-in function: `tp_hash`.
+
+The PyBufferProcs object still needs working `segcountproc`, and `charbufferproc`
+implementations.
+
 
 - test_all.py
 
 Should probably write a global unittest file, instead of using a Makefile. This should make
 everything here properly platform independent.
+
+[1] - http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
