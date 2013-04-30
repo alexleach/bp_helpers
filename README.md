@@ -1,9 +1,7 @@
-
   bp_helpers
 ============
 
 Reusable code for exposing C++ code to Python, using Boost Python
------------------------------------------------------------------
 
 
 Introduction
