@@ -1,11 +1,11 @@
-  bp_helpers
-============
+#  bp_helpers
+=============
 
-Reusable code for exposing C++ code to Python, using Boost Python
+###### Reusable code for exposing C++ code to Python, using Boost Python
 
 
-Introduction
-============
+## Introduction
+================
 
 These are some pieces of semi-resuable code I've been using, whilst exposing
 a C++ library to Python. The most reusable pieces of code here are no
@@ -16,8 +16,8 @@ Python, a couple of source files, as well as a Makefile and some
 Python unit tests.
 
 
-Getting started
-===============
+### Getting started
+===================
 
 Well, the code here is only going to be useful if you've already got 
 started with Boost Python. Still, if you want to test that it all works,
@@ -30,11 +30,11 @@ module is configured to compile the relevant C++ code, using Python's distutils,
 before running tests on the exposed interfaces.
 
 
-Contents
-========
+## Contents
+============
 
-Exposing C++ STL iostream's
----------------------------
+### Exposing C++ STL iostream's
+===============================
 
 1. Header Files:-
   - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
@@ -52,8 +52,8 @@ Exposing C++ STL iostream's
   - `return_buffer_object.cpp`
 
 
-Exposing std::list
-------------------
+### Exposing std::list
+======================
 
 - make_list.hpp
   Wraps std::list
@@ -63,15 +63,15 @@ Exposing std::list
   Probably duplicated functionality...
 
 
-3. Thread safety
-----------------
+### Thread safety
+=================
 
 - make_threadsafe.hpp
   RAII for Python GIL and ThreadState
 
 
-4. Misc
--------
+### Misc
+========
 
 - converters.hpp
   Some converters used to get a 'const char* const*' from various Python objects
@@ -90,8 +90,8 @@ Exposing std::list
 - refcounted_object.hpp
   This was inspired from somewhere. Don't actually use it currently..
 
-Unit Tests
-==========
+### Unit Tests
+==============
 
 - tests/test_buffer_object.py
 - tests/test_make_list.py
@@ -100,8 +100,8 @@ Unit Tests
 Each unittest can be run directly, using Python. This will compile the relevant C++ code,
 before proceding to run the unittests.
 
-TODO
-====
+### TODO
+========
 
 - buffer.hpp
 
