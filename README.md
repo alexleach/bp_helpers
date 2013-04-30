@@ -36,18 +36,16 @@ before running tests on the exposed interfaces.
 ### Exposing C++ STL iostream's
 ===============================
 
-1. Header Files:-
+- Header Files:-
   - [buffer.hpp]
 
     Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
     conforming to Python's ["old style buffer object"s][1].
+  - [return_buffer_object.hpp]
 
- - [return_buffer_object.hpp]
-
-    Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
+    Defines a `buffer<>` template, which can be used to map STL iostreams to a PyTypeObject's
     PyBufferProcs struct.
-
-2. And their corresponding source files:-
+- And their corresponding source files:-
   - [buffer.cpp]
   - [return_buffer_object.cpp]
 
