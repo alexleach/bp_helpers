@@ -64,7 +64,7 @@ before running tests on the exposed interfaces.
 
 - [make_callback.hpp]
 
-  Code to help call a Python function from C++ (in sort).
+  Code to help call a Python function from C++ (in the `sort` function).
   Probably duplicated functionality...
 
 
@@ -73,7 +73,7 @@ before running tests on the exposed interfaces.
 
 - [make_threadsafe.hpp]
 
-  RAII for Python GIL and ThreadState
+  RAII for Python's `PyGILState_STATE` and `PyThreadState` objects.
 
 
 ### Misc
@@ -81,7 +81,7 @@ before running tests on the exposed interfaces.
 
 - [converters.hpp]
 
-  Some converters used to get a 'const char* const*' from various Python objects
+  Some converters used to get a `const char* const*` from various Python objects
 
 - [get_object_id.hpp]
 
@@ -142,6 +142,7 @@ everything here properly platform independent.
 [refcounted_object.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/refcounted_object.hpp
 [make_constructor.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/make_constructor.hpp
 [make_submodules.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/make_submodules.hpp
+[make_threadsafe.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/make_threadsafe.hpp
 
 [buffer.cpp]: https://github.com/alexleach/bp_helpers/blob/master/src/buffer.cpp
 [return_buffer_object.cpp]: https://github.com/alexleach/bp_helpers/blob/master/src/return_buffer_object.cpp
