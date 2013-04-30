@@ -8,8 +8,8 @@ tests: $(TESTS)
 	done
 
 clean: 
-	rm -r build
-	rm ./*.so
+	-rm -r build
+	-rm ./*.so
 
 .PHONY: all clean tests
 

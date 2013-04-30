@@ -1,3 +1,6 @@
+#ifndef __BOOST_PYTHON_RETURN_BUFFER_OBJECT__
+#define __BOOST_PYTHON_RETURN_BUFFER_OBJECT__
+
 /// Thanks to Mark English for sharing this. Taken and modified from a post he
 /// made to the cplusplus-sig mailing list, at:-
 ///    http://thread.gmane.org/gmane.comp.python.c++/11763/focus=11767
@@ -5,42 +8,19 @@
 /// \file custom_return_internal_reference.hpp
 ///
 
-#ifndef __BOOST_PYTHON_RETURN_BUFFER_OBJECT__
-#define __BOOST_PYTHON_RETURN_BUFFER_OBJECT__
 
-# include <boost/python/default_call_policies.hpp>
+#include "boost_helpers/buffer.hpp"
+
 # include <boost/python/return_internal_reference.hpp>
 # include <boost/python/reference_existing_object.hpp>
-# include <boost/python/instance_holder.hpp>
 # include <boost/python/to_python_indirect.hpp>
 # include <boost/python/to_python_value.hpp>
-
-# include <structmember.h>   ///< for T_OBJECT
 
 # include <boost/mpl/if.hpp>
 # include <boost/mpl/assert.hpp>
 # include <boost/type_traits/is_same.hpp>
 
-#include "boost_helpers/buffer_pointer_converter.hpp"
-
 namespace boost { namespace python { namespace detail {
-
-        // Register buffer_pytype_ptr
-        //
-        // Attempt to register each used buffer object, on module import, so 
-        // we don't need to make a new HolderGenerator each time.
-        template <class T>
-        struct register_buffer_pytype_ptr
-        {
-            register_buffer_pytype_ptr(T* p)
-            {
-                printf("register_self with type object: %s\n", typeid(p).name());
-                const_cast<converter::registration &>(
-                    converter::registry::lookup(boost::python::type_id<T>())
-                    )
-                .m_class_object = &buffer<T>::type_object;
-            }
-        };
 
 
         //////////////////////////////////////////////////////////////////////
@@ -69,7 +49,7 @@ namespace boost { namespace python { namespace detail {
             // Shouldn't we only use this struct once, when the module is imported?
                 printf("in make_buffer_object_holder::execute\n");
                 // Typedef an 'instance holder'. Is this used anywhere?
-                typedef objects::pointer_holder<T*, T> holder_t;
+                //typedef objects::pointer_holder<T*, T> holder_t;
                 // Jump into conversion lookup mechanism
                 typedef T argument_type;
     # if BOOST_WORKAROUND(__GNUC__, < 3)
@@ -77,27 +57,14 @@ namespace boost { namespace python { namespace detail {
                 // suppresses an ICE, somehow
                 (void)r::converters;
     # endif 
-                register_buffer_pytype_ptr<T> x(p);
                 return converter::registered<argument_type>::converters.to_python(
                                   const_cast<T*>(p) );
             }
 
         };
 
-        // For testing different holder_types...
-        struct make_buffer_holder
-        {
-            typedef instance_holder* result_t;
-
-            template <class T>
-            static result_t execute(T* p)
-            {
-                return objects::pointer_holder<T*, T>(p);
-            }
-        };
-
         ////////////////////////////////////////////////////////////////////////////
-        /// Return value converter
+        /// ResultConverterGenerator
 
         /// reference_existing_object replacement allowing use of different
         /// "MakeHolder" model.
@@ -153,11 +120,11 @@ namespace boost { namespace python { namespace detail {
   ///                                       for "reference_existing_object"
   ///   @param  owner_arg                - \sa return_internal_reference
   ///   @param  BasePolicy_              - \sa return_internal_reference
-  template <class ResultConverterGenerator = detail::buffer_result_converter_t,
-            std::size_t owner_arg = 1,
-            class BasePolicy = return_internal_reference<> >
+  template <class  ResultConverterGenerator = reference_existing_buffer,
+            size_t owner_arg = 1,
+            class  BasePolicy_ = return_internal_reference<> >
   struct return_buffer_reference
-      : BasePolicy
+      : BasePolicy_
   {
       /// Possible to test for Read-only or read-write buffer?
       //mpl::if_< is_same<
@@ -167,8 +134,8 @@ namespace boost { namespace python { namespace detail {
       template<class R>
       struct apply
       {
-
-          BOOST_MPL_ASSERT_MSG( is_pointer<R>::value, RETURN_BUFFER_REFERENCE_EXPECTS_A_POINTER_TYPE, (R));
+          BOOST_MPL_ASSERT_MSG( is_pointer<R>::value,
+              RETURN_BUFFER_REFERENCE_EXPECTS_A_POINTER_TYPE, (R));
 
           struct type :
               boost::python::to_python_value<
@@ -177,20 +144,47 @@ namespace boost { namespace python { namespace detail {
           {
               type()
               {
-                  printf("apply::type\n");
+                  printf("in return_buffer_reference::apply::type\n");
                   detail::buffer_pointee(R());
               }
           };
       };
   };
 
-  // In place of a typedef template
-  /// Call policy to create internal references to registered types
-  //template <class BasePolicy = default_call_policies>
-  //struct return_buffer_reference
-  //    : detail::return_buffer_reference_impl< reference_existing_buffer
-  //                                          , BasePolicy > { };
+  // Register buffer_pytype_ptr
+  //
+  // Attempt to register each used buffer object, on module import, so 
+  // we don't need to make a new HolderGenerator each time.
+  template <class T>
+  struct register_buffer_pytype
+  {
+      typedef buffer<T> buffer_t;
+      register_buffer_pytype(void)
+      {
+          converter::registry::insert(
+              (converter::to_python_function_t)&buffer_t::convert,
+              boost::python::type_id<T>(),
+              &buffer_t::get_pytype );
+      }
+  };
 
+  // Make a PyTypeObject that follows the buffer protocol.
+  //
+  // @param Pointee - C++ class to expose to Python
+  template <class Pointee>
+  PyTypeObject make_buffer_type_object(void)
+  { 
+      printf("making Python version of IO stream-like object\n");
+      //typedef typename boost::python::buffer<Pointee>   p_t;
+
+      buffer<Pointee>::object_t.tp_name
+          = const_cast<char*>(type_id<Pointee*>().name());
+      if (PyType_Ready(&buffer<Pointee>::object_t) < 0)
+          boost::python::throw_error_already_set();
+      boost::python::register_buffer_pytype<Pointee> x;
+      //Py_INCREF(&buffer<Pointee>::object_t);
+      return buffer<Pointee>::object_t;
+  }
 
 }  } // End boost::python namespace
 

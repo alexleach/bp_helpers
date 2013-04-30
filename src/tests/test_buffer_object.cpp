@@ -7,9 +7,10 @@
 #include <boost/python/detail/wrap_python.hpp>
 #include <boost/python/converter/pytype_object_mgr_traits.hpp>
 
-//#include "boost_helpers/return_buffer_object.hpp"
-#include "../return_buffer_object.cpp"
-#include "../buffer_pointer_converter.cpp"
+#include "boost_helpers/return_buffer_object.hpp"
+
+//#include "boost_helpers/return_buffer_object.cpp"
+//#include "boost_helpers/buffer_pointer_converter.cpp"
 
 #include <streambuf>
 
@@ -38,26 +39,25 @@ namespace BufferObjectExample {
 
 namespace boost { namespace python { 
 
-// TODO.
-// Make this register the object!! Preferably template-ised in:
-//    buffer_pointer_object.hpp
-/*
+    // TODO.
+    // Make this register the object!! Preferably template-ised in:
+    //    buffer_pointer_object.hpp
     //
     // Converter Specializations
     //
+/*
     namespace converter
     {
-      template <>
-      struct object_manager_traits<BufferObjectExample::Stream>
-          : pytype_object_manager_traits<
-                &buffer<BufferObjectExample::Stream>::type_object,
-                BufferObjectExample::Stream
+        template <>
+        struct object_manager_traits<BufferObjectExample::Stream>
+            : pytype_object_manager_traits<
+                &buffer<BufferObjectExample::Stream>::type_object
+                , BufferObjectExample::Stream
             >
       {
       };
     }
 */
-
 }   } 
 
 namespace BufferObjectExample {
@@ -70,9 +70,10 @@ namespace BufferObjectExample {
         // How can we remove the need to use a to_python_converter? str.hpp
         // doesn't use one...
 
-        boost::python::to_python_converter<BufferObjectExample::Stream, 
-            boost::python::buffer<BufferObjectExample::Stream>, 
-                true >();
+        //boost::python::to_python_converter<BufferObjectExample::Stream, 
+        //    boost::python::buffer<BufferObjectExample::Stream>, 
+        //        true >();
+        boost::python::make_buffer_type_object<BufferObjectExample::Stream>();
 
         // Expose Foo object, either via to_python_converter(how?), or class_
         // is easier.
@@ -96,8 +97,9 @@ namespace BufferObjectExample {
 
             // Readonly property works, with to_python_converter.
             .add_property("buf",
-                bpl::make_getter(&BufferObjectExample::Container::m_buf, 
-                    bpl::reference_existing_buffer() ) )
+                bpl::make_getter(
+                    &BufferObjectExample::Container::m_buf, // ) )
+                    bpl::return_buffer_reference<>() ) )
 
             // Fails to compile, because stringstream::operator= is private.
             //    bpl::make_setter(
@@ -112,7 +114,6 @@ namespace BufferObjectExample {
 //namespace {
     BOOST_PYTHON_MODULE(test_buffer_object)
     {
-      printf("loading module\n");
       BufferObjectExample::register_test_buffer_object();
     }
 //} // Ends anonymous namespace
