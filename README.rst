@@ -24,7 +24,7 @@ or test it after playing around with it, you can just run the Makefile,
 which will compile every C++ test file in src/tests/, by running a relevant 
 Python unit-test module.
 
-The Python unittests are provided in the tests/ directory. Each unittest
+The Python unittests are provided in the `tests/` directory. Each unittest
 module is configured to compile the relevant C++ code, using Python's distutils, 
 before running tests on the exposed interfaces.
 
@@ -32,56 +32,56 @@ before running tests on the exposed interfaces.
 Contents
 ========
 
-1. Exposing C++ STL iostream's
-------------------------------
+Exposing C++ STL iostream's
+---------------------------
 
-i. Header Files
+1. Header Files:-
+ - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
 
-  - buffer.hpp
-Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
-conforming to Python's ["old-style buffer object"](http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects).
+   Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
+   conforming to Python's [old style buffer objects][1].
 
-  - return_buffer_object.hpp
-Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
-PyBufferProcs struct.
+ - `return_buffer_object.hpp`
 
-ii. And their corresponding source files:-
+   Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
+   PyBufferProcs struct.
 
-  - buffer.cpp
-  - return_buffer_object.cpp
+2. And their corresponding source files:-
+  * `buffer.cpp`
+  * `return_buffer_object.cpp`
 
 
-2. Exposing std::list
----------------------
+Exposing std::list
+------------------
 
 - make_list.hpp
-Wraps std::list
+  Wraps std::list
 
 - make_callback.hpp
-Code to help call a Python function from C++ (in sort).
-Probably duplicated functionality...
+  Code to help call a Python function from C++ (in sort).
+  Probably duplicated functionality...
 
 
 3. Thread safety
 ----------------
 
 - make_threadsafe.hpp
-RAII for Python GIL and ThreadState
+  RAII for Python GIL and ThreadState
 
 
 4. Misc
 -------
 
 - converters.hpp
-Some converters used to get a 'const char* const*' from various Python objects
+  Some converters used to get a 'const char* const*' from various Python objects
 
 - get_object_id.hpp
-Get internal ID of python object, like id(obj) does, from python. I think this is 
-already available in Boost Python, so should probably delete this and figure out 
-how to use that instead.
+  Get internal ID of python object, like id(obj) does, from python. I think this is 
+  already available in Boost Python, so should probably delete this and figure out 
+  how to use that instead.
 
 - make_constructor.hpp
-Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
+  Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
 
 - make_submodules.hpp
 Macros to call multiple Boost Python registration functions, within a module scope
@@ -121,4 +121,5 @@ implementations.
 Should probably write a global unittest file, instead of using a Makefile. This should make
 everything here properly platform independent.
 
-[1] - http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
+[1]: http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
+[buffer.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp
