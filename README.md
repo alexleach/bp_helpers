@@ -39,12 +39,17 @@ before running tests on the exposed interfaces.
 - Header Files:-
   - [buffer.hpp]
 
-    Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
-    conforming to Python's ["old style buffer object"s][1].
+    Defines a `buffer<>` template `ResultConverter`, allowing an iostream to
+    be exposed with a custom `PyTypeObject`. This is the object that manages
+    and describes each Python object instance to the C-API. The `PyTypeObject`
+    exposed here was designed to conform to Python's 
+    ["old style buffer object"s][1].
   - [return_buffer_object.hpp]
 
-    Defines a `buffer<>` template, which can be used to map STL iostreams to a PyTypeObject's
-    PyBufferProcs struct.
+    Defines a `return_value_policy` and `HolderGenerator` for the `buffer<>`
+    template. These can be used by Boost Python code to wrap iostream-like 
+    objects to a `PyTypeObject`'s internal `PyBufferProcs` struct. This 
+    essentially enables buffering at Python's C-API level.
 - And their corresponding source files:-
   - [buffer.cpp]
   - [return_buffer_object.cpp]
