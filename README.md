@@ -1,6 +1,9 @@
-############
+
   bp_helpers
-############
+============
+
+Reusable code for exposing C++ code to Python, using Boost Python
+-----------------------------------------------------------------
 
 
 Introduction
@@ -36,19 +39,19 @@ Exposing C++ STL iostream's
 ---------------------------
 
 1. Header Files:-
- - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
+  - [buffer.hpp](http://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp)
 
-   Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
-   conforming to Python's [old style buffer objects][1].
+    Defines a ResultConverter, where an iostream can be exposed with a PyTypeObject
+    conforming to Python's ["old style buffer object"s][1].
 
  - `return_buffer_object.hpp`
 
-   Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
-   PyBufferProcs struct.
+    Defines a buffer<> template, which can be used to map STL iostreams to a PyTypeObject's
+    PyBufferProcs struct.
 
 2. And their corresponding source files:-
-  * `buffer.cpp`
-  * `return_buffer_object.cpp`
+  - `buffer.cpp`
+  - `return_buffer_object.cpp`
 
 
 Exposing std::list
@@ -84,10 +87,10 @@ Exposing std::list
   Use a raw Python argument signature when initialising a class, ie. `Foo(*args, **kwds)`
 
 - make_submodules.hpp
-Macros to call multiple Boost Python registration functions, within a module scope
+  Macros to call multiple Boost Python registration functions, within a module scope
 
 - refcounted_object.hpp
-This was inspired from somewhere. Don't actually use it currently..
+  This was inspired from somewhere. Don't actually use it currently..
 
 Unit Tests
 ==========
@@ -109,10 +112,10 @@ binary and seekable. Read-only and read-write cannot be tested for at run-time, 
 specialisations will need to be chosen at compile-time. Making a template that can decide 
 this automatically is no doubt possible, but is beyond my current level of knowledge of C++.
 
-Not only that, but the PyTypeObject underlying the buffer template is still missing an
+Not only that, but the `PyTypeObject` underlying the buffer template is still missing an
 implementation of the built-in function: `tp_hash`.
 
-The PyBufferProcs object still needs working `segcountproc`, and `charbufferproc`
+The `PyBufferProcs` object still needs working `segcountproc`, and `charbufferproc`
 implementations.
 
 
