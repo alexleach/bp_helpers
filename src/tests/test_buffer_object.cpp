@@ -9,9 +9,6 @@
 
 #include "boost_helpers/return_buffer_object.hpp"
 
-//#include "boost_helpers/return_buffer_object.cpp"
-//#include "boost_helpers/buffer_pointer_converter.cpp"
-
 #include <streambuf>
 
 namespace BufferObjectExample {
@@ -73,12 +70,18 @@ namespace BufferObjectExample {
         //boost::python::to_python_converter<BufferObjectExample::Stream, 
         //    boost::python::buffer<BufferObjectExample::Stream>, 
         //        true >();
+
+        // This works nicely! Similar to registering one of the indexing_suite
+        // classes.
         boost::python::make_buffer_type_object<BufferObjectExample::Stream>();
 
-        // Expose Foo object, either via to_python_converter(how?), or class_
-        // is easier.
+        // Expose Foo object.
+        //
+        // Not sure how to get the to_python_converter to work here...
         //boost::python::to_python_converter<Foo,
         //        boost::python::to_python_value<Foo>,  true>();
+
+        // Wrapping a class like this, though, is obvious.
         boost::python::class_<BufferObjectExample::Foo>("Foo");
 
         boost::python::class_<BufferObjectExample::Container,

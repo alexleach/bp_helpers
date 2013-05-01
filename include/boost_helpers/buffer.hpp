@@ -55,7 +55,7 @@ namespace boost { namespace python {
       static Py_ssize_t write_buffer(value_type* self, Py_ssize_t idx, void **pp);
 
       // TODO:
-      static Py_ssize_t get_seg_count(value_type* self, Py_ssize_t idx, void *pp);
+      static Py_ssize_t get_seg_count(value_type* self, Py_ssize_t * lenp);
       static Py_ssize_t getcharbuf(value_type* self, Py_ssize_t idx, void *pp);
 
       // PyTypeObject members functions provided in PyBuffer_Type
@@ -306,7 +306,7 @@ namespace boost { namespace python {
     // PyBufferProcs requirement
     template <class Pointee>
     Py_ssize_t buffer<Pointee>::get_seg_count(
-        value_type* self, Py_ssize_t idx, void *pp)
+        value_type* self, Py_ssize_t * lenp)
     {
         printf("in get_seg_count\n");
         return 0;
@@ -368,23 +368,23 @@ namespace boost { namespace python {
         PyObject_HEAD_INIT(NULL)
         0                                           // ob_size
         , const_cast<char*>("Boost.Python.Buffer")  // tp_name
-        , sizeof(buffer<Pointee>::value_type)       // tp_basicsize
+        , sizeof(value_type)                        // tp_basicsize
         , 0                                         // tp_itemsize
-        , (destructor)&Buffer_Dealloc      // tp_dealloc
+        , (destructor)&Buffer_Dealloc               // tp_dealloc
         , 0                                         // tp_print
         , 0                                         // tp_getattr
         , 0                                         // tp_setattr
         , 0                                         // tp_compare
-        , (reprfunc)&buffer<Pointee>::p_repr                         // tp_repr
+        , (reprfunc)&p_repr                         // tp_repr
         , 0                                         // tp_as_number
         , 0                                         // tp_as_sequence
         , 0                                         // tp_as_mapping
         , 0                                         // tp_hash 
         , 0                                         // tp_call
-        , (reprfunc)&buffer<Pointee>::p_str                          // tp_str
+        , (reprfunc)&p_str                          // tp_str
         , PyObject_GenericGetAttr                   // tp_getattro
         , 0                                         // tp_setattro
-        , &buffer<Pointee>::p_buffer                                 // tp_as_buffer
+        , &p_buffer                                 // tp_as_buffer
         , Py_TPFLAGS_DEFAULT
           | Py_TPFLAGS_BASETYPE  
           | Py_TPFLAGS_HAVE_GETCHARBUFFER 
