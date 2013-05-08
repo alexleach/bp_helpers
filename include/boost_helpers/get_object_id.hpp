@@ -1,7 +1,6 @@
 /// get_object_id.hpp
 ///
-/// Get the internal ID of a boost::python::object, as returned by id(obj) from
-///  Python.
+/// Utilities for working with type IDs, in both C++ and Python land.
 
 #ifndef __BOOST_PYTHON_GET_OBJECT_ID__
 #define __BOOST_PYTHON_GET_OBJECT_ID__
@@ -17,19 +16,38 @@
 #endif
 
 // Typedef alias for PYOBJECT_ID_TYPE
-typedef PYOBJECT_ID_TYPE PyObj_Id_t;
+typedef PYOBJECT_ID_TYPE object_id_type;
 
 namespace boost { namespace python {
     // forward declaration of object
     class object;
 
-    PyObj_Id_t get_object_id(boost::python::object& ptr);
+    // Get the internal ID of a PyObject, as returned by id(obj), in Python
+    object_id_type get_object_id(boost::python::object& obj);
+
+    // Get the last component of a fully-qualified C++ type id.
+    // @param T - type of which to get the ID.
+    template <class T>
+    const char* unqualify_id(void);
 
 }   }
 
-inline PyObj_Id_t boost::python::get_object_id(boost::python::object& ptr)
+inline object_id_type boost::python::get_object_id(boost::python::object& obj)
 {
-    return (PyObj_Id_t)((void*)ptr.ptr());
+    return (object_id_type) ( (void*)(obj.ptr()) );
+}
+
+template <class T>
+inline const char * boost::python::unqualify_id(void)
+{
+    // Get the fully qualified name.
+    const char* full_name = type_id<T>().name();
+    size_t idx = strlen(full_name) - 1;
+    // Loop backwards through the name, until we reach a ':'
+    while ((full_name[idx-1] != ':') && (idx > 0))
+        idx--;
+    // Slice full_name to be an unqualified name:-
+    return &full_name[idx];
 }
 
 #endif

@@ -8,14 +8,14 @@
 // Each class gives RAII semantics to control Python threading functions, which
 // fall into a small number of categories:-
 //
-//      1 - To initialise threading, use boost::python::threads()
+//      1 - To initialise threading, use boost::python::init_threads()
 //      2 - To perform blocking I/O operations, use boost::python::threadstate()
 //      3 - When doing callbacks into Python code from C++ threads, use
 //           boost::python::gilstate()
 //      4 - When performing thread-safe functions, that acquire the global mutex
 //          lock, also use boost::python::gilstate()
 //
-// \sa {boost::python::threads,
+// \sa {boost::python::init_threads,
 //      boost::python::threadstate, 
 //      boost::python::gilstate}
 // 
@@ -76,13 +76,12 @@ namespace boost { namespace python {
     // pthread_mutex_lock on Linux), Python's Global Interpreter Lock (GIL) will
     // usually block the call. This class will release the Global Interpreter
     // Lock and allow C++ functions to use the system's threading API.
-    class gilstate
+    class gilstate : threadstate
     {
     public:
-        gilstate(void)
+        gilstate(void) : threadstate()
         {
             // From [2]
-            m_threadstate = threadstate();
             gil_state = PyGILState_Ensure();
         }
 
@@ -90,13 +89,11 @@ namespace boost { namespace python {
         {
             // From [2] 
             PyGILState_Release(gil_state);
-            //delete m_threadstate;
         }
 
     private:
         // from [2]
         PyGILState_STATE gil_state;
-        threadstate m_threadstate;
     };
 
 }   }

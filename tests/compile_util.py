@@ -17,8 +17,6 @@ BASEDIR = os.path.abspath(
         '..' )
     )
 
-print 'BASEDIR = ', BASEDIR
-
 SRCDIR = os.path.join(BASEDIR, "src")
 INCDIR = os.path.join(BASEDIR, "include")
 BUILDDIR = os.getcwd()
