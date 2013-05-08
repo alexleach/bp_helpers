@@ -9,51 +9,55 @@
 
 namespace boost { namespace python {
 
-    // register_ostream_pytype
-    //
-    // Register a C++ class that conforms to the C++ STL ostream interface, on
-    // module import.
-    // This is a multi-step process:-
-    //  0. Register the iostream_base class. \sa detail::register_iostream_base_pytype
-    //  1. Add the type_id of the wrapped class to the Boost Python registry.
-    //  2. Add a to_python converter.
-    //  3. Register safe pointer conversions between the wrapped class and its
-    //     bases.
-    template <class T>
-    struct register_ostream_pytype
-        : detail::register_iostream_base_pytype<T,
-            detail::final_ostream_derived_policies<T> >
-    {
-        typedef ostream<T> stream_t;
+    namespace objects {
 
-        register_ostream_pytype(void)
+        // register_ostream_pytype
+        //
+        // Register a C++ class that conforms to the C++ STL ostream interface,
+        // on module import.
+        // This is a multi-step process:-
+        //  0. Register the iostream_base class.
+        //     \sa `detail::register_iostream_base_pytype`
+        //  1. Add the type_id of the wrapped class to the Boost Python registry.
+        //  2. Add a to_python converter.
+        //  3. Register safe pointer conversions between the wrapped class and
+        //     its bases.
+        template <class T>
+        struct register_ostream_pytype
             : detail::register_iostream_base_pytype<T,
-                detail::final_ostream_derived_policies<T> >()
+                detail::final_ostream_derived_policies<T> >
         {
-            printf("  Looking up OStream: %s \n", typeid(T).name() );
-            // Insert type_id into registry
-            converter::registration& ostream_converter
-                = const_cast<converter::registration&>(
-                    converter::registry::lookup(type_id<T>()) );
+            typedef ostream<T> stream_t;
 
-            if (ostream_converter.m_class_object == 0)
+            register_ostream_pytype(void)
+                : detail::register_iostream_base_pytype<T,
+                    detail::final_ostream_derived_policies<T> >()
             {
-                printf("  Registering OStream: %s \n", typeid(T).name() );
-                // Put the new PyTypeObject in to the registry.
-                ostream_converter.m_class_object = &stream_t::m_type;
+                printf("  Looking up OStream: %s \n", typeid(T).name() );
+                // Insert type_id into registry
+                converter::registration& ostream_converter
+                    = const_cast<converter::registration&>(
+                        converter::registry::lookup(type_id<T>()) );
 
-                // Insert to_python converter into registry
-                converter::registry::insert(
-                    (converter::to_python_function_t)&stream_t::convert,
-                    boost::python::type_id<T>(),
-                    &stream_t::get_pytype );
+                if (ostream_converter.m_class_object == 0)
+                {
+                    printf("  Registering OStream: %s \n", typeid(T).name() );
+                    // Put the new PyTypeObject in to the registry.
+                    ostream_converter.m_class_object = &stream_t::m_type;
 
-                // Register base class pointer compatibility.
-                objects::register_conversion<stream_t,
-                                             typename stream_t::base_type>(false);
+                    // Insert to_python converter into registry
+                    converter::registry::insert(
+                        (converter::to_python_function_t)&stream_t::convert,
+                        boost::python::type_id<T>(),
+                        &stream_t::get_pytype );
+
+                    // Register base class pointer compatibility.
+                    register_conversion<stream_t,
+                                        typename stream_t::base_type>(false);
+                }
             }
-        }
-    };
+        };
+    }   // -- End objects namespace -- //
 
     // Make a PyTypeObject that follows the ostream protocol.
     //
@@ -71,7 +75,7 @@ namespace boost { namespace python {
             boost::python::throw_error_already_set();
 
         Py_INCREF(&ostream_t::m_type);
-        register_ostream_pytype<Pointee>();
+        objects::register_ostream_pytype<Pointee>();
         return ostream_t();
     }
 
