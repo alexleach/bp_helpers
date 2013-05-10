@@ -14,6 +14,8 @@
 
 namespace test_io_streams {
 
+    // Is testing only stringstreams sufficient? probably not..
+
     // IStream. An istream-like class
     class IStream
         : public std::istringstream
@@ -24,21 +26,23 @@ namespace test_io_streams {
         : public std::ostringstream
     { };
 
+    // IOStream. An iostream-like class
     class IOStream
         : public std::stringstream
     { };
 
+    // Test return value policies from a container class.
     class Container
     {
     public:
-        OStream& GetOStream(void) { return m_ostream; }
         IStream  m_istream;
         OStream  m_ostream;
         IOStream m_iostream;
         Container(void)
         {
-            m_iostream << "Foo bar baz";
+            m_iostream << "Foo bar baz. Initialised from C++";
         }
+        const OStream& GetOStream(void) { return m_ostream; }
     };
 
     class DerivedIOStream
@@ -53,11 +57,13 @@ namespace test_io_streams {
 
 namespace boost { namespace python { 
 
-    // TODO.
-    // Make this register the object!! Preferably elsewhere.
     namespace converter
     {
+        // Does this help at all??? Doesn't seem to make a difference...
+        // Until I find a use for this, I won't bother automating it in the
+        // public headers.
 
+        /*
         template <>
         struct object_manager_traits< istream<test_io_streams::IStream> >
             : pytype_object_manager_traits<
@@ -81,6 +87,7 @@ namespace boost { namespace python {
                 , iostream<test_io_streams::IOStream>
               >
         { };
+        */
 
     } /* -- end converter namespace */
 
@@ -92,20 +99,22 @@ namespace test_io_streams {
 
     void register_test_iostreams(void)
     {
-
-        printf("Making IStream, OStream and IOStream PyTypeObjects\n");
+        // Register to_python conversions and add the object type IDs to the
+        // Boost Python registry.
         bpl::istream<IStream>   m_istream  = bpl::make_istream_type_object<IStream>();
         bpl::ostream<OStream>   m_ostream  = bpl::make_ostream_type_object<OStream>();
         bpl::iostream<IOStream> m_iostream = bpl::make_iostream_type_object<IOStream>();
 
-        // Add object to current namespace. 
+        // Add object to current namespace. This makes the class instantiable
+        // from within Python.
         bpl::add_type_to_module<IStream>(&m_istream.m_type,   "IStream");
         bpl::add_type_to_module<OStream>(&m_ostream.m_type,   "OStream");
         bpl::add_type_to_module<IOStream>(&m_iostream.m_type, "IOStream");
 
-        // The class_ template mechanisms don't allow the use of a custom
+        // The class_<> template mechanisms don't allow the use of a custom
         // PyTypeObject, so unfortunately it can't be used if we want to get any
-        // performance benefits.
+        // performance benefits. Shame...
+
         /*
         typedef bpl::istream<IStream> istream_converter;
         typedef bpl::ostream<OStream> ostream_converter;
@@ -118,13 +127,20 @@ namespace test_io_streams {
             ;
         */
 
-        //boost::python::to_python_converter<OStream, 
-        //    boost::python::ostream<OStream>, 
-        //        true >();
+        // For registering a to_python conversion, all that is really needed,
+        // is this:
+    //    boost::python::to_python_converter<OStream, 
+    //        boost::python::ostream<OStream>
+    //# ifdef BOOST_PYTHON_SUPPORTS_PY_SIGNATURES
+    //            , true
+    //# endif
+    //        >();
 
         printf("Registering Container class\n");
         bpl::class_<test_io_streams::Container, boost::noncopyable>
-            ("Container", bpl::init<>() )
+            ("Container",
+             "Container class for testing return_iostream()",
+             bpl::init<>() )
             .add_property("istream",
                 bpl::make_getter(
                     &test_io_streams::Container::m_istream,
@@ -139,17 +155,24 @@ namespace test_io_streams {
                 &test_io_streams::Container::GetOStream ,
                 bpl::return_iostream() )
 
+            //.def("get_internal_reference_ostream",
+            //    "Return an ostream object with the default Call Policy",
+            //    &test_io_streams::Container::GetOStream )
+
             .add_property("iostream",
                 bpl::make_getter(
                     &test_io_streams::Container::m_iostream,
                     bpl::return_iostream() ) )
             ;
 
-        bpl::class_<DerivedIOStream, boost::noncopyable, bpl::bases<IOStream> >
-            ("DerivedIOStream" )
+        bpl::class_<DerivedIOStream, boost::noncopyable >
+            ("DerivedIOStream", "This will fail to use the right PyTypeObject.")
             ;
 
-        printf("Test Module imported\n");
+        bpl::class_<DerivedIOStream, boost::noncopyable, bpl::bases<IOStream> >
+            ("DerivedBaseIOStream",
+             "Using bases<> works to override the class metatype.")
+            ;
     }
 
 }

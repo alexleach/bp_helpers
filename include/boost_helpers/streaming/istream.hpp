@@ -32,14 +32,16 @@ namespace boost { namespace python {
         class DerivedPolicies 
             = detail::final_istream_derived_policies<Pointee> >
     class istream
-        : virtual public converters::iostream_base<Pointee, DerivedPolicies>
+        : virtual public converter::iostream_base<Pointee, DerivedPolicies>
     {
     public:
+        //friend class detail::final_istream_derived_policies<Pointee>;
+        friend class converter::iostream_base<Pointee, DerivedPolicies>;
 
         //@{
         /// IStream wrapper typedefs
         // Shortcut typedef for the base class template.
-        typedef converters::iostream_base<Pointee, DerivedPolicies> base_type;
+        typedef converter::iostream_base<Pointee, DerivedPolicies> base_type;
         // Shortcut typedef for this class template
         typedef istream<Pointee, DerivedPolicies>              container_type;
         // PyObject being managed
@@ -101,15 +103,17 @@ namespace boost { namespace python {
         static int       p_init(value_type  * self,
                                 PyObject    * args,
                                 PyObject    * kwds);
+        /*
         static PyObject * p_new(PyTypeObject * subtype,
                                 PyObject    * args,
                                 PyObject    * kwds);
-        static void   p_dealloc(value_type  * obj);
+        */
         static long int  p_hash(value_type  * self);
         static PyObject* p_repr(value_type  * self);
         static PyObject*  p_str(value_type  * self);
         //@}
 
+    # if PY_VERSION_HEX < 0x03000000
         //@{
         /// \brief PyBufferProcs member functions
         ///   PyBufferProcs functions to enable C++ iostream support in Python
@@ -119,6 +123,7 @@ namespace boost { namespace python {
         static Py_ssize_t p_segcount(value_type* self, Py_ssize_t * lenp);
         static Py_ssize_t p_charbuf(value_type* self, Py_ssize_t idx, void **pp);
         //@}
+    # endif
 
         //@{
         /// PyMappingMethods functions:-
@@ -128,7 +133,6 @@ namespace boost { namespace python {
         //@{
         /// PySequenceMethods functions:-
         static Py_ssize_t p_length(value_type* self);
-        static PyObject * p_concat(value_type* self, PyObject* other);
         static PyObject * p_repeat(value_type* self, Py_ssize_t count);
         static PyObject *   p_item(value_type* self, Py_ssize_t idx);
         static PyObject *  p_slice(value_type* self, Py_ssize_t left,
@@ -139,15 +143,19 @@ namespace boost { namespace python {
                                    Py_ssize_t right, PyObject* other);
         //@}
 
-    private:
+    protected:
+        //@{
+        /// Protected members callable from this and derived classes.
         // get buffer size
         static size_t p_size(Pointee * ptr);
         static size_t p_tell(Pointee * ptr);
         // seekg() helpers
         static Pointee* p_seek(Pointee* ptr, pos_type pos);
         static Pointee* p_seek(Pointee* ptr, off_type offset, seekdir way);
-        // Called by p_seek methods, to throw an appropriate exception if an
-        // operation failed.
+        //@}
+    private:
+        /// Called by p_seek methods, to throw an appropriate exception if an
+        /// operation failed.
         static void check_seek_state(Pointee * ptr);
 
     };

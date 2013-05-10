@@ -1,4 +1,4 @@
-namespace boost { namespace python { namespace converters {
+namespace boost { namespace python { namespace converter {
 
     // ---        IOstream_base template member definitions        --- //
 
@@ -45,21 +45,48 @@ namespace boost { namespace python { namespace converters {
         return &DerivedPolicies::m_type;
     }
 
+    // construct
+    //
+    // from_python converter requirement
+    template <class Pointee, class DerivedPolicies>
+    void iostream_base<Pointee, DerivedPolicies>::construct(
+        PyObject* ptr, converter::rvalue_from_python_stage1_data* data)
+    {
+        printf("In iostream_base::construct\n");
+        void * storage =
+            ((converter::rvalue_from_python_storage<Pointee>*)data)->storage.bytes;
+        extract<const Pointee&> stream(ptr);
+        new (storage) Pointee();
+        data->convertible = storage;
+    }
+
     // convert
     //
     // to_python converter requirement
     template <class Pointee, class DerivedPolicies>
-    PyObject * iostream_base<Pointee, DerivedPolicies>::convert(Pointee & value)
+    PyObject * iostream_base<Pointee, DerivedPolicies>::convert(Pointee const& value)
     {
         printf("In iostream_base convert\n");
         typename DerivedPolicies::value_type * new_obj = PyObject_New(
             typename DerivedPolicies::value_type, &DerivedPolicies::m_type);
         new_obj->m_weakrefs  = NULL;
-        new_obj->m_stream    = &value;
-        PyObject * py_obj    = reinterpret_cast<PyObject*>(new_obj);
-        Py_INCREF(py_obj); //< When this line is commented, tp_dealloc is called. Uncommented, it's not.
-        printf("finished conversion\n");
-        return py_obj;
+        new_obj->m_stream = const_cast<Pointee*>(&value);
+        new_obj->m_new    = false;
+        new_obj->buf      = NULL;
+        PyObject * obj    = reinterpret_cast<PyObject*>(new_obj);
+        return obj;
+    }
+
+    // convertible
+    //
+    // to_python converter requirement
+    template <class Pointee, class DerivedPolicies>
+    void * iostream_base<Pointee, DerivedPolicies>::convertible(
+        PyObject* ptr)
+    {
+        printf("checking iostream-base convertible\n");
+        if (Py_TYPE(ptr)->tp_as_buffer != NULL)
+            return ptr;
     }
 
     // Call operator. Does this ever get used?
@@ -102,31 +129,44 @@ namespace boost { namespace python { namespace converters {
     // this to be a template-ised member function, due to the signature of 
     // 'newfunc'.
     template <class Pointee, class DerivedPolicies>
-    PyObject * iostream_base<Pointee, DerivedPolicies>::p_new(
+    typename iostream_base<Pointee, DerivedPolicies>::value_type *
+    iostream_base<Pointee, DerivedPolicies>::p_new(
         object_type  * subtype,
         PyObject     * args,
         PyObject     * kwds)
     {
-        printf("In PyIOstream_base_New\n");
-        value_type * obj = PyObject_NEW(value_type, &m_type);
-        if (obj != NULL && !PyErr_Occurred()) // If created object ok
+        printf("In iostream_base::p_new\n");
+        value_type * self = PyObject_NEW(value_type, &DerivedPolicies::m_type);
+        if (self != NULL && !PyErr_Occurred())
         {
-            obj->m_weakrefs = NULL;
+            self->m_weakrefs = NULL;
+            self->m_stream   = new Pointee();
+            self->buf        = NULL;
+            self->m_new      = true;
         }
-        return (PyObject*)obj;
+        return self;
     }
 
     // p_dealloc
     template <class Pointee, class DerivedPolicies>
-    void iostream_base<Pointee, DerivedPolicies>::p_dealloc(value_type * obj)
+    void iostream_base<Pointee, DerivedPolicies>::p_dealloc(value_type * self)
     {
-        printf("In PyIOStream_base::p_dealloc\n");
+        printf("In iostream_base::p_dealloc\n");
         // Deallocate temporaries if needed, but do not begin destruction just yet
-        if (obj->m_weakrefs != NULL)
+        if (self->m_weakrefs != NULL)
         {
-            PyObject_ClearWeakRefs(reinterpret_cast<PyObject *>(obj));
+            PyObject_ClearWeakRefs(reinterpret_cast<PyObject *>(self));
         }
-        Py_TYPE(obj)->tp_free(obj);
+        Py_TYPE(self)->tp_free(self);
+    }
+
+    // p_free
+    template <class Pointee, class DerivedPolicies>
+    void iostream_base<Pointee, DerivedPolicies>::p_free(value_type * self)
+    {
+        //printf("In iostream_base::p_free\n");
+        if (self->m_new == true)
+            delete self->m_stream;
     }
 
     // p_repr
@@ -135,34 +175,56 @@ namespace boost { namespace python { namespace converters {
     template <class Pointee, class DerivedPolicies>
     PyObject* iostream_base<Pointee, DerivedPolicies>::p_repr(value_type * self)
     {
-        Pointee * stream = self->m_stream;
+        //Pointee * stream = self->m_stream;
+# if PY_VERSION_HEX < 0x03000000
         return PyString_FromFormat(
+# else
+        return PyUnicode_FromFormat(
+# endif
             "<Boost.Python.IOstream_base class, at %p>",
-            self);
+            (void*)self->m_stream);
     }
     //@}
 
-    /*
+# if PY_VERSION_HEX >= 0x02060000
+    //@{
+    /// PyBufferProcs members
     template <class Pointee, class DerivedPolicies>
-    PyObject * iostream_base<Pointee, DerivedPolicies>::p_concat(
-        value_type* self, PyObject* other)
+    int iostream_base<Pointee, DerivedPolicies>::p_getbuf(
+        value_type * self, Py_buffer * view, int flags)
     {
-        
+        printf("In iostream_base::p_getbuf\n");
+        return PyBuffer_FillInfo(view, reinterpret_cast<PyObject*>(self),
+                                 self->buf, Py_SIZE(self), 0, flags);
     }
-    */
+
+    template <class Pointee, class DerivedPolicies>
+    void iostream_base<Pointee, DerivedPolicies>::p_releasebuf(
+        value_type * self, Py_buffer * view)
+    {
+        printf("In iostream_base::p_releasebuf\n");
+
+    }
+    //@}
+# endif
 
     //@{
     /// PyTypeObject static members
-    /// ===========================
 
     // Struct to provide Python-side ostreaming support
     template <class Pointee, class DerivedPolicies>
     PyBufferProcs iostream_base<Pointee, DerivedPolicies>::m_stream =
     {
+# if PY_VERSION_HEX < 0x03000000
         NULL, // bf_getreadbuffer
         NULL, // bf_getwritebuffer
         NULL, // bf_getsegcount
-        NULL  // bf_getcharbuffer
+        NULL, // bf_getcharbuffer
+# endif
+# if PY_VERSION_HEX >= 0x02060000
+        (getbufferproc)&p_getbuf,           // bf_getbuffer
+        (releasebufferproc)&p_releasebuf    // bf_releasebuffer
+# endif
     };
 
     template <class Pointee, class DerivedPolicies>
@@ -204,9 +266,8 @@ namespace boost { namespace python { namespace converters {
     template <class Pointee, class DerivedPolicies>
     PyTypeObject iostream_base<Pointee, DerivedPolicies>::m_type =
     {
-        PyObject_HEAD_INIT(NULL)
-        0                                           // ob_size
-        , const_cast<char*>("Boost.Python.IOstream_base") // tp_name
+        PyVarObject_HEAD_INIT(NULL, 0)
+        0 //const_cast<char*>("Boost.Python.IOstream_base") // tp_name
         , sizeof(value_type)                        // tp_basicsize
         , 0                                         // tp_itemsize
         , (destructor)&p_dealloc                    // tp_dealloc
@@ -224,9 +285,14 @@ namespace boost { namespace python { namespace converters {
         , PyObject_GenericGetAttr                   // tp_getattro
         , 0                                         // tp_setattro
         , &m_stream                                 // tp_as_buffer
-        , Py_TPFLAGS_DEFAULT
+        , Py_TPFLAGS_DEFAULT                        //< tp_flags
           | Py_TPFLAGS_BASETYPE  
-          | Py_TPFLAGS_HAVE_WEAKREFS                //< tp_flags
+# if PY_VERSION_HEX < 0x03000000
+          | Py_TPFLAGS_HAVE_WEAKREFS
+#   if PY_VERSION_HEX >= 0x02060000
+          | Py_TPFLAGS_HAVE_NEWBUFFER
+#   endif
+# endif
         , iostream_base_doc                         // tp_doc
         , 0                                         // tp_traverse
         , 0                                         // tp_clear
@@ -245,7 +311,7 @@ namespace boost { namespace python { namespace converters {
         , 0                                         // tp_init
         , 0                                         // tp_alloc
         , (newfunc)&p_new                           // tp_new
-        , 0                                         // tp_free
+        , (freefunc)&p_free                         // tp_free
         , 0                                         // tp_is_gc
         , 0                                         // tp_bases
         , 0                                         // tp_mro

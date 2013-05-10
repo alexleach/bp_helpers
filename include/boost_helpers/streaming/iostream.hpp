@@ -37,7 +37,7 @@ namespace boost { namespace python {
 
       //@{
       /// Wrapper class typedefs
-      typedef converters::iostream_base<Pointee, DerivedPolicies> base_type;
+      typedef converter::iostream_base<Pointee, DerivedPolicies>  base_type;
       typedef istream<Pointee, DerivedPolicies>                istream_base;
       typedef ostream<Pointee, DerivedPolicies>                ostream_base;
       typedef iostream<Pointee, DerivedPolicies>             container_type;
@@ -79,13 +79,6 @@ namespace boost { namespace python {
       static int      p_init(value_type  * self,
                              PyObject    * args,
                              PyObject    * kwds);
-      static PyObject* p_new(PyTypeObject * subtype,
-                             PyObject     * args,
-                             PyObject     * kwds);
-
-      // Custom dealloc method for the buffered class.
-      static void p_dealloc(value_type * obj);
-      static void p_free(value_type * obj);
 
       static PyObject* p_repr(value_type * self);
       //@}

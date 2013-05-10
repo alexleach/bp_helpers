@@ -29,10 +29,10 @@ namespace boost { namespace python { namespace detail {
         template <class T, class DerivedPolicies>
         struct register_iostream_base_pytype
         {
-            typedef converters::iostream_base<T, DerivedPolicies> stream_t;
+            //typedef converter::iostream_base<T, DerivedPolicies> stream_t;
             register_iostream_base_pytype(void)
             {
-                typedef typename stream_t::object_type object_type;
+                typedef typename DerivedPolicies::object_type object_type;
                 printf("  Looking up iostream_base: %s \n", typeid(object_type).name());
                 converter::registration& iostream_base_converter
                     = const_cast<converter::registration&>(
@@ -41,15 +41,29 @@ namespace boost { namespace python { namespace detail {
                 if (iostream_base_converter.m_class_object == 0)
                 {
                     printf("  Registering iostream_base %s \n", typeid(object_type).name());
-                    iostream_base_converter.m_class_object = &stream_t::m_type;
+                    iostream_base_converter.m_class_object = &DerivedPolicies::m_type;
+
                     // Register to_python conversion for the base-type.
                     converter::registry::insert(
-                        (converter::to_python_function_t)&stream_t::convert,
+                        (converter::to_python_function_t)&DerivedPolicies::convert,
                         type_id<object_type>(),
-                        &stream_t::get_pytype );
+                        &DerivedPolicies::get_pytype );
+
+                    // Register from_python conversion for the base-type
+                    /*
+                    converter::registry::push_back(
+                        &DerivedPolicies::convertible
+                        , &DerivedPolicies::construct
+                        , type_id<T>()
+        //# ifdef BOOST_PYTHON_SUPPORTS_PY_SIGNATURES
+                        , &converter::expected_from_python_type<T>::get_pytype
+        //# endif
+                        );
+                    */
+
                     // This is needed so Boost Python knows that derived classes
                     // can be passed, where pointers to stream_t are expected.
-                    objects::register_dynamic_id<stream_t>();
+                    objects::register_dynamic_id<DerivedPolicies>();
                 }
             }
         };
@@ -174,11 +188,11 @@ namespace boost { namespace python { namespace detail {
   //
   // @param Pointee - C++ class to expose to Python
   template <class Pointee, class DerivedPolicies>
-  converters::iostream_base<Pointee, DerivedPolicies>
+  converter::iostream_base<Pointee, DerivedPolicies>
       make_iostream_base_type_object(void)
   { 
       printf("making Python version of IOStream_base type object\n");
-      typedef typename converters::iostream_base<Pointee,
+      typedef typename converter::iostream_base<Pointee,
                                                  DerivedPolicies> base_object;
 
       base_object::object_type.tp_name

@@ -31,13 +31,13 @@ namespace boost { namespace python {
         class DerivedPolicies
             = boost::python::detail::final_ostream_derived_policies<Pointee> >
     class ostream
-        : virtual public converters::iostream_base<Pointee, DerivedPolicies>
+        : virtual public converter::iostream_base<Pointee, DerivedPolicies>
     {
     public:
 
         //@{
         /// OStream wrapper typedefs
-        typedef converters::iostream_base<Pointee, DerivedPolicies> base_type;
+        typedef converter::iostream_base<Pointee, DerivedPolicies> base_type;
         typedef ostream<Pointee, DerivedPolicies>              container_type;
         typedef typename base_type::value_type   value_type;
         typedef typename base_type::object_type object_type;
@@ -94,43 +94,33 @@ namespace boost { namespace python {
         static int        p_init(value_type  * self,
                                  PyObject    * args,
                                  PyObject    * kwds);
-        static PyObject *  p_new(PyTypeObject * subtype,
-                                 PyObject     * args,
-                                 PyObject     * kwds);
-        // Custom dealloc method for the ostreamed class.
-        static void    p_dealloc(value_type   * obj);
         // PyBufferProcs functions enabling C++ iostream support in Python ostream
         // objects
         static PyObject * p_repr(value_type   * self);
         //@}
 
+    # if PY_VERSION_HEX < 0x03000000
         //@{
         // PyBufferProcs member functions
-        // TO TEST:
         static Py_ssize_t p_writebuf(value_type* self, Py_ssize_t idx, void **pp);
-
-        // TODO:
         static Py_ssize_t p_segcount(value_type* self, Py_ssize_t * lenp);
         //@}
+    # endif
 
         //@{
         /// PyMappingMethods functions:-
-        static PyObject* p_subscript(value_type* self, PyObject* item);
         static int   p_ass_subscript(value_type* self, PyObject* item,
                                      PyObject* value);
         //@}
 
         //@{
         /// PySequenceMethods functions:-
-        static Py_ssize_t p_length(value_type* self);
-        static PyObject * p_concat(value_type* self, PyObject* other);
-        static PyObject *   p_item(value_type* self, Py_ssize_t idx);
-        static PyObject *  p_slice(value_type* self, Py_ssize_t left,
-                                   Py_ssize_t right);
-        static int      p_ass_item(value_type *self, Py_ssize_t idx,
-                                   PyObject* other);
-        static int     p_ass_slice(value_type* self, Py_ssize_t left,
-                                   Py_ssize_t right, PyObject* other);
+        static Py_ssize_t   p_length(value_type* self);
+        static value_type * p_concat(value_type* self, value_type* other);
+        static int        p_ass_item(value_type *self, Py_ssize_t idx,
+                                     PyObject* other);
+        static int       p_ass_slice(value_type* self, Py_ssize_t left,
+                                     Py_ssize_t right, PyObject* other);
         //@}
 
         // Boost Python visitor requirements (register Python-side methods)
