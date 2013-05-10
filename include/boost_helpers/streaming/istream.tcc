@@ -7,15 +7,6 @@ namespace boost { namespace python {
     istream<Pointee, DerivedPolicies>::istream(void)
     {
         printf("In istream initailiser void\n");
-
-        converter::registration& istream_converter
-            = const_cast<converter::registration&>(
-                converter::registry::lookup(type_id<Pointee>()) );
-        istream_converter.m_class_object = &m_type;
-
-        // Register the Base class
-        objects::register_dynamic_id< base_type >();
-        objects::register_conversion<container_type, base_type >(false);
     }
 
     template <class Pointee, class DerivedPolicies>
@@ -90,7 +81,7 @@ namespace boost { namespace python {
                                                   PyObject*   args,
                                                   PyObject*   kwds)
     {
-        printf("In IStream::p_init!\n");
+        printf("In istream::p_init!\n");
         Pointee * m_istream = self->m_stream;
         void * buf;
         /// Copied from buffer_new() in Python 2.7.4's Objects/bufferobject.c
@@ -103,51 +94,17 @@ namespace boost { namespace python {
             return -1;
         if (!PyArg_ParseTuple(args, "O|nn:IStream", &obj, &offset, &size))
             return -1;
+        /// TODO !!
+        /// Make sure this is version safe!!
         obj = PyBuffer_FromObject(obj, offset, size);
-
         // My own additions, to get that Python buffer into a C++ IOStream
         if ((size = obj->ob_type->tp_as_buffer->bf_getreadbuffer(obj, 0, &buf)) < 0)
             return -1;
         m_istream->rdbuf()->str((typename Pointee::char_type*)buf);
 
+        self->buf = buf;
         self->m_stream = m_istream;
         return 0;
-    }
-
-    // p_new
-    //
-    // Initialises istream class for derived types. Compiler refuses to allow
-    // this to be a template-ised member function, due to the signature of 
-    // `newfunc`.
-    template<class Pointee, class DerivedPolicies>
-    PyObject * istream<Pointee, DerivedPolicies>::p_new(
-        PyTypeObject * subtype, PyObject * args, PyObject * kwds)
-    {
-        printf("In PyIStream_New\n");
-        //value_type * obj = PyType_GenericNew(subtype, args, kwds);
-        value_type * obj = PyObject_NEW(value_type, &m_type);
-        if (obj != NULL && !PyErr_Occurred()) // If created object ok
-        {
-            obj->m_weakrefs = NULL;
-        }
-        else
-            throw_error_already_set();
-        printf("iostream::p_new - Creating new %s\n", typeid(Pointee).name());
-        obj->m_stream = new Pointee();
-        return (PyObject*)obj;
-    }
-
-    // p_dealloc
-    template <class Pointee, class DerivedPolicies>
-    void istream<Pointee, DerivedPolicies>::p_dealloc(value_type * obj)
-    {
-      printf("In PyIStream::p_dealloc\n");
-      // Allocate temporaries if needed, but do not begin destruction just yet
-      if (obj->m_weakrefs != NULL)
-      {
-        PyObject_ClearWeakRefs(reinterpret_cast<PyObject *>(obj));
-      }
-      obj->ob_type->tp_free(obj);
     }
 
     // p_hash
@@ -167,14 +124,22 @@ namespace boost { namespace python {
     template <class Pointee, class DerivedPolicies>
     PyObject* istream<Pointee, DerivedPolicies>::p_repr(value_type * self)
     {
-        Pointee * stream = self->m_stream;
+        Pointee * m_istream = self->m_stream;
+        size_t offset;
+        try {
+            offset = p_tell(m_istream);
+        } catch (const char*)
+        {
+            offset = -1;
+        }
+        //size_t size = p_size(self->m_stream);
         //const char * status = (stream->openmode & std::ios_base::out)
         //                        ? "read-write" : "read-only";
         return PyString_FromFormat(
-            "<Boost.Python.IStream, size %zd, offset %zd at %p>",
-            p_size(self->m_stream),
-            stream->tellg(),
-            self);
+            "<Boost.Python.IStream, size %lu, offset %lu at %p>",
+            p_size(m_istream),
+            offset,
+            (void*)m_istream);
     }
 
     // p_str
@@ -184,53 +149,65 @@ namespace boost { namespace python {
     PyObject* istream<Pointee, DerivedPolicies>::p_str(value_type * self)
     {
         Py_ssize_t size = 0;
-        Pointee * stream = self->m_stream;
-        if (stream != NULL)
-        {
-            std::streambuf * buf = stream->rdbuf();
-            // Should make sure that the stream is not binary
-            if (buf != NULL)
-            {
-                size = buf->in_avail();
-                //vector<char> ptr; // don't really want to include vector just
-                                    // for this.
-                char ptr[size+1];   //< Is this safe across all platforms?
-                                    //  Seems to work well, but -pedantic spits
-                                    //  out a warning message.
-                threadstate UNBLOCK_THREADS;
-                size = stream->readsome(ptr, size); //< readsome is safer, but
-                //buf->sgetn(ptr, size);            // buf->getn is probably faster.
-                
-                return PyString_FromStringAndSize(ptr, size);
-            }
-        }
-        return PyString_FromStringAndSize('\0', 0);
+        //Pointee * stream = self->m_stream;
+        std::streambuf * buf = self->m_stream->rdbuf();
+        buf->pubseekpos(0);
+        // Should make sure that the stream is not binary
+        size = buf->in_avail();
+        //vector<char> ptr; // don't really want to include vector just for this
+        std::auto_ptr<char> ptr = std::auto_ptr<char>(new char[size+1]);
+        threadstate UNBLOCK_THREADS;
+        //size = stream->readsome(ptr, size); //< readsome is safer, but
+        buf->sgetn(ptr.get(), size);          // buf->sgetn is probably faster.
+        UNBLOCK_THREADS.~threadstate();
+        
+        return PyString_FromStringAndSize(ptr.get(), size);
     }
     //@}
+
+# if PY_VERSION_HEX < 0x03000000
 
     //@{
     /// PyBufferProcs members
 
     // read_buffer
     //
-    // Reads data from internal stream into the array pointed to by pp
+    // Reads formatted data from internal stream into the array pointed to by pp
     template <class Pointee, class DerivedPolicies>
-    Py_ssize_t istream<Pointee, DerivedPolicies>::p_readbuf(value_type* self,
-                                                            Py_ssize_t idx,
-                                                            void **pp)
+    Py_ssize_t istream<Pointee, DerivedPolicies>::p_readbuf(
+        value_type * self, Py_ssize_t idx, void ** pp)
     {
+        printf("In istream::p_readbuf\n");
         if (idx != 0)
         {
           PyErr_SetString(PyExc_SystemError,
               "accessing non-existent istream segment.");
-          throw_error_already_set();
+          return -1;
         }
-        Pointee& m_istream = *self->m_stream;
+
+        Pointee * m_istream = self->m_stream;
         {
             threadstate UNBLOCK_THREADS;
-            m_istream >> *pp ;
+            m_istream->seekg(idx);
         }
-        return (Py_ssize_t) p_tell(&m_istream);
+
+        std::streamsize size = 0;
+        if (self->buf == NULL)
+        {
+            std::streambuf * m_buf = m_istream->rdbuf();
+            size = m_buf->in_avail();
+            char * buf  = new char[size];
+            m_istream->get(buf, size);
+            *pp = buf;
+        }
+        else
+        {
+            *pp = self->buf;
+            pp += idx;
+            size = m_istream->rdbuf()->in_avail();
+        }
+        printf("pp set to %p\n", *pp);
+        return size;
     }
 
     // p_segcount
@@ -244,10 +221,9 @@ namespace boost { namespace python {
     Py_ssize_t istream<Pointee, DerivedPolicies>::p_segcount(
         value_type* self, Py_ssize_t * lenp)
     {
-        Py_ssize_t size = static_cast<Py_ssize_t>(p_size(self->m_stream));
         if (lenp != NULL)
         {
-            *lenp = size;
+            *lenp = p_size(self->m_stream);
         }
         return 1;
     }
@@ -275,12 +251,38 @@ namespace boost { namespace python {
     }
     //@}
 
+# endif
+
     //@{
     /// PyMappingMethod functions
     template <class Pointee, class DerivedPolicies>
     PyObject * istream<Pointee, DerivedPolicies>::p_subscript(
-        value_type* self, PyObject* item)
-    {}
+        value_type * self, PyObject* key)
+    {
+        printf("In istream::p_subscript\n");
+        long idx = PyInt_AsLong(key);
+        if (idx == -1 && PyErr_Occurred())
+            return NULL;
+
+        Pointee * m_istream = self->m_stream;
+        size_t size = p_size(m_istream);
+        if (idx < 0)
+            idx += size;
+        else if (idx > size)
+            idx -= size;
+
+        char_type val;
+        try {
+            threadstate UNBLOCK_THREADS;
+            m_istream = p_seek(m_istream, pos_type(idx));
+            val = m_istream->get();
+        }
+        catch (const char* err) {
+            PyErr_SetString(PyExc_IOError, err);
+            return NULL;
+        }
+        return PyString_FromFormat("%c", val);
+    }
     //@}
 
     //@{
@@ -289,68 +291,97 @@ namespace boost { namespace python {
     Py_ssize_t istream<Pointee, DerivedPolicies>::p_length(
         value_type* self)
     {
-        return static_cast<Py_ssize_t>(p_size(self->m_stream));
-    }
-
-    template <class Pointee, class DerivedPolicies>
-    PyObject * istream<Pointee, DerivedPolicies>::p_concat(
-        value_type* self, PyObject* other)
-    {
-        //self->m_stream
+        return p_size(self->m_stream);
     }
 
     template <class Pointee, class DerivedPolicies>
     PyObject * istream<Pointee, DerivedPolicies>::p_repeat(
         value_type* self, Py_ssize_t count)
-    {}
+    {
+        printf("In iostream_base::p_repeat\n");
+        PyObject *obj;
+        register char *p;
+        Pointee * m_istream = self->m_stream;
+        Py_ssize_t size = p_size(m_istream);
+        if (count < 0)
+            count = 0;
+
+        if (count > PY_SSIZE_T_MAX / size) {
+            PyErr_SetString(PyExc_MemoryError, "result too large");
+            return NULL;
+        }
+
+        if ((obj = PyString_FromStringAndSize(NULL, size * count)) == NULL)
+            return NULL;
+        p = PyString_AS_STRING(obj);
+
+        threadstate UNBLOCK_THREADS;
+        while ( count-- )
+        {
+            m_istream->get(p, size + 1);
+            p += size;
+            m_istream->seekg(0);
+        }
+        return obj;
+    }
 
     template <class Pointee, class DerivedPolicies>
     PyObject * istream<Pointee, DerivedPolicies>::p_item(
         value_type* self, Py_ssize_t idx)
-    {}
+    {
+        printf("In iostream_base::p_item\n");
+    }
 
     template <class Pointee, class DerivedPolicies>
     PyObject * istream<Pointee, DerivedPolicies>::p_slice(
         value_type* self, Py_ssize_t left, Py_ssize_t right)
-    {}
+    {
+        printf("In istream::p_slice\n");
+        Pointee * m_istream = self->m_stream;
+        Py_ssize_t size = p_size(m_istream);
+        if (left < 0)
+            left = 0;
+        if (right < 0)
+            right = 0;
+        if (right > size)
+            right = size;
+        if (right < left)
+            right = left;
+        PyObject * obj;
+        register char * p;
+
+        obj = PyString_FromStringAndSize(NULL, right - left);
+        p = PyString_AS_STRING(obj);
+
+        //m_istream = p_seek(m_istream, pos_type(left));
+        threadstate UNBLOCK_THREADS;
+        m_istream->seekg(pos_type(left));
+        m_istream->get(p, 1 + right - left);
+        return obj;
+    }
     //@}
 
-    // p_size
-    // 
-    // Get the current buffer size. This works by first seeking to the end of 
-    // the buffer, then calculating the address difference between that and the
-    // start. Finally, we return the current pointer position to where it was
-    // when we called size.
+    //@{
+    /// Private member functions
+
     template <class Pointee, class DerivedPolicies>
-    size_t istream<Pointee, DerivedPolicies>::p_size(Pointee * m_istream)
+    void istream<Pointee, DerivedPolicies>::check_seek_state(Pointee * ptr)
     {
-        pos_type cur_pos;
-        size_t size;
-        //Pointee * m_istream = self->m_stream;
-        std::ios_base::iostate state = m_istream->rdstate();
-        threadstate UNBLOCK_THREADS;
-        switch (state)
-        {
-        case std::ios_base::eofbit:
-            return (size_t) p_tell(m_istream);
-            break;
-        case std::ios_base::failbit || std::ios_base::badbit :
-            m_istream->clear();
-            break;
-        default:
-            break;
-        }
-        cur_pos   = p_tell(m_istream);  //< Get current position
-        m_istream = p_seek(m_istream, 0, m_istream->end); //< Seek to the end
-        size = m_istream->tellg();      //< Calculate the size.
-        m_istream->seekg(cur_pos);      //< Go back to previous position.
-        return size;
+        std::ios_base::iostate state = ptr->rdstate();
+        if (state & std::ios_base::eofbit)
+            ptr->clear();
+        else if (state & std::ios_base::failbit)
+            throw "seekg() operation failed.";
+        else if (state & std::ios_base::badbit)
+            throw "seekg() operation failed. The integrity of the "
+                "stream may have been affected" ;
     }
 
     template <class Pointee, class DerivedPolicies>
     Pointee * istream<Pointee, DerivedPolicies>::p_seek(
         Pointee * ptr, pos_type pos)
     {
+        printf("In iostream_base::p_seek1\n");
         if (!ptr->good())
             ptr->clear();
         ptr->seekg(pos);
@@ -362,6 +393,7 @@ namespace boost { namespace python {
     Pointee * istream<Pointee, DerivedPolicies>::p_seek(
         Pointee * ptr, off_type offset, seekdir way)
     {
+        printf("In iostream_base::p_seek2\n");
         if (!ptr->good())
             ptr->clear();
         ptr->seekg(offset, way);
@@ -369,26 +401,47 @@ namespace boost { namespace python {
         return ptr;
     }
 
+    // p_size
+    // 
+    // Get the current buffer size. This works by first seeking to the end of 
+    // the buffer, then calculating the address difference between that and the
+    // start. Finally, we return the current pointer position to where it was
+    // when we called size.
     template <class Pointee, class DerivedPolicies>
-    void istream<Pointee, DerivedPolicies>::check_seek_state(Pointee * ptr)
+    size_t istream<Pointee, DerivedPolicies>::p_size(Pointee * m_istream)
     {
-        switch (ptr->rdstate())
+        pos_type cur_pos;
+        size_t size = -1;
+        std::ios_base::iostate state = m_istream->rdstate();
+        threadstate UNBLOCK_THREADS;
+        if (state & std::ios_base::eofbit)
         {
-        case std::ios_base::eofbit:
-            ptr->clear();
-            break;
-        case std::ios_base::failbit :
-            ::PyErr_Format(PyExc_RuntimeError
-                , "seekg() operation failed." );
-            throw_error_already_set();
-        case  std::ios_base::badbit :
-            ::PyErr_Format(PyExc_RuntimeError
-                , "seekg() operation failed. The integrity of the "
-                "stream may have been affected" );
-            throw_error_already_set();
-        default:
-            break;
+            try {
+                size = (size_t) p_tell(m_istream);    
+            }
+            catch (const char* msg)
+            {
+                UNBLOCK_THREADS.~threadstate();
+                PyErr_SetString(PyExc_IOError, msg);
+                PyErr_Print();
+            }
+            return size;
         }
+        else if ((state & (std::ios_base::failbit | std::ios_base::badbit)) > 0)
+            m_istream->clear();
+        try {
+            cur_pos   = p_tell(m_istream);  //< Get current position
+            m_istream = p_seek(m_istream, 0, m_istream->end); //< Seek to the end
+        }
+        catch (const char * msg)
+        {
+            UNBLOCK_THREADS.~threadstate();
+            PyErr_SetString(PyExc_IOError, msg);
+            PyErr_Print();
+        }
+        size = m_istream->tellg();      //< Calculate the size.
+        m_istream->seekg(cur_pos);      //< Go back to previous position.
+        return size;
     }
 
     template <class Pointee, class DerivedPolicies>
@@ -404,45 +457,18 @@ namespace boost { namespace python {
             ///   badbit  - stream error
             std::ios_base::iostate state = ptr->rdstate();
             const char* err;
-            Py_ssize_t size = 0;
-            switch (state)
-            {
-            case std::ios_base::eofbit:
-                err = "EOF. This should not be recognised as an exception. "
-                      "Please submit a bug report.";
-                break;
-            case std::ios_base::failbit:
-                err = "Stream sentry creation failed.";
-                break;
-            case std::ios_base::badbit:
-                err = "Stream error.";
-                break;
-            default:
+            if (state & std::ios_base::failbit)
+                err = "Logical error on i/o operation.";
+            else if (state & std::ios_base::badbit)
+                err = "Read / write error on i/o operation.";
+            else
                 // Shouldn't get here!
                 err = "Unknown error. Please submit a bug report";
-                break;
-            }
-                ::PyErr_Format(
-                    PyExc_RuntimeError
-                    , "IStream tellg() call failed. %s"
-                    , err);
-                throw_error_already_set();
+            throw err;
         }
         return cur_pos;
     }
-
-    // type_members
-    //
-    // Initialise a dynamic array of the type's extraneous members.
-    /*
-    template <class Pointee>
-    PyMemberDef istream<Pointee>::type_members[] =
-    {
-        {const_cast<char*>("__weakref__"), T_OBJECT, offsetof(
-            istream<Pointee>::value_type, m_weakrefs), 0},
-        {0}
-    } ;
-    */
+    //@}
 
     PyDoc_STRVAR( istream_doc, "Boost Python wrapped istream-like object.");
 
@@ -450,16 +476,22 @@ namespace boost { namespace python {
     template <class Pointee, class DerivedPolicies>
     PyBufferProcs istream<Pointee, DerivedPolicies>::m_buffer =
     {
-        (readbufferproc)  &p_readbuf,
-        NULL,
-        (segcountproc)    &p_segcount,
-        (charbufferproc)  &p_charbuf,
+# if PY_VERSION_HEX < 0x03000000
+        (readbufferproc)  &p_readbuf,       // bf_getreadbuffer
+        NULL,                               // bf_getwritebuffer
+        (segcountproc)    &p_segcount,      // bf_getsegcount
+        (charbufferproc)  &p_charbuf,       // bf_getcharbuffer
+# endif
+# if PY_VERSION_HEX >= 0x02060000
+        NULL,                               // bf_getbuffer
+        NULL                                // bf_releasebuffer
+# endif
     } ;
 
     template <class Pointee, class DerivedPolicies>
     PySequenceMethods istream<Pointee, DerivedPolicies>::m_sequence = {
         (lenfunc)p_length,                 // sq_length
-        (binaryfunc)p_concat,              // sq_concat
+        NULL,                              // sq_concat
         (ssizeargfunc)p_repeat,            // sq_repeat
         (ssizeargfunc)p_item,              // sq_item
         (ssizessizeargfunc)p_slice,        // sq_slice
@@ -482,12 +514,11 @@ namespace boost { namespace python {
     typename istream<Pointee, DerivedPolicies>::object_type
         istream<Pointee, DerivedPolicies>::m_type =
     {
-        PyObject_HEAD_INIT(NULL)
-        0                                           // ob_size
-        , const_cast<char*>("Boost.Python.IStream") // tp_name
+        PyVarObject_HEAD_INIT(NULL, 0)
+        0 //const_cast<char*>("Boost.Python.IStream") // tp_name
         , sizeof(value_type)                        // tp_basicsize
         , 0                                         // tp_itemsize
-        , (destructor)&p_dealloc                    // tp_dealloc
+        , 0 //(destructor)&p_dealloc                    // tp_dealloc
         , 0                                         // tp_print
         , 0                                         // tp_getattr
         , 0                                         // tp_setattr
@@ -502,10 +533,15 @@ namespace boost { namespace python {
         , PyObject_GenericGetAttr                   // tp_getattro
         , 0                                         // tp_setattro
         , &m_buffer                                 // tp_as_buffer
-        , Py_TPFLAGS_DEFAULT
+        , Py_TPFLAGS_DEFAULT                        //< tp_flags
           | Py_TPFLAGS_BASETYPE  
+# if PY_VERSION_HEX < 0x03000000
           | Py_TPFLAGS_HAVE_GETCHARBUFFER 
-          | Py_TPFLAGS_HAVE_WEAKREFS                //< tp_flags
+          | Py_TPFLAGS_HAVE_WEAKREFS
+#   if PY_VERSION_HEX >= 0x02060000
+          | Py_TPFLAGS_HAVE_NEWBUFFER
+#   endif
+# endif
         , istream_doc                               // tp_doc
         , 0                                         // tp_traverse
         , 0                                         // tp_clear
@@ -523,7 +559,7 @@ namespace boost { namespace python {
         , 0                                         // tp_dictoffset
         , (initproc)&p_init                         // tp_init
         , 0                                         // tp_alloc
-        , (newfunc)&p_new                           // tp_new
+        , 0                                         // tp_new
         , 0                                         // tp_free
         , 0                                         // tp_is_gc
         , 0                                         // tp_bases

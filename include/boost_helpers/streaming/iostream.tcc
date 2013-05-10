@@ -6,22 +6,6 @@ namespace boost { namespace python {
     template <class Pointee, class DerivedPolicies>
     iostream<Pointee, DerivedPolicies>::iostream(void)
     {
-        printf("Initialising iostream. inserting dynamic conversions\n");
-
-        converter::registration& iostream_converter
-            = const_cast<converter::registration&>(
-                converter::registry::lookup(type_id<Pointee>()) );
-        iostream_converter.m_class_object = &m_type;
-
-        // Register the Base class
-        objects::register_dynamic_id< istream_base >();
-        objects::register_dynamic_id< ostream_base >();
-
-        // Register the up-cast
-        objects::register_conversion<container_type, istream_base >(false);
-        objects::register_conversion<container_type, ostream_base >(false);
-
-
         printf("In iostream initailiser void\n");
     }
 
@@ -50,19 +34,6 @@ namespace boost { namespace python {
     {
         printf("In iostream templated initailiser\n");
     }
-
-    // Struct to provide Python-side buffering support
-    // Have to deal with multiple inheritance, so populate
-    // istream<Pointee>::m_buffer with the missing member,
-    // from ostream<Pointee>::m_buffer
-    template <class Pointee, class DerivedPolicies>
-    PyBufferProcs iostream<Pointee, DerivedPolicies>::m_buffer =
-    {
-        (readbufferproc)  istream_base::p_readbuf,
-        (writebufferproc) ostream_base::p_writebuf,
-        (segcountproc)    istream_base::p_segcount,
-        (charbufferproc)  istream_base::p_charbuf,
-    } ;
 
     // Call operator. Does this ever get used?
     template <class Pointee, class DerivedPolicies>
@@ -105,11 +76,14 @@ namespace boost { namespace python {
                                                    PyObject*   args,
                                                    PyObject*   kwds)
     {
-        printf("In IOstream::p_init!\n");
+        printf("In iostream::p_init!\n");
         Pointee * m_stream = self->m_stream;
         /// Copied from buffer_new() in Python 2.7.4's Objects/bufferobject.c
+        void * buf;
         PyObject * obj    = Py_None;
         Py_ssize_t offset = 0;
+
+
         Py_ssize_t size   = Py_END_OF_BUFFER;
         if (PyErr_WarnPy3k("buffer-like IOStreams not supported in Python 3.x", 1) < 0)
             return -1;
@@ -121,61 +95,14 @@ namespace boost { namespace python {
         // My own additions, to get that Python buffer into a C++ IOStream
         if (obj != Py_None)
         {
-            printf("iostream::p_init - Creating new %s\n", typeid(Pointee).name());
-            void * buf;
             obj = PyBuffer_FromReadWriteObject(obj, offset, size);
             if ((size = obj->ob_type->tp_as_buffer->bf_getwritebuffer(obj, 0, &buf)) < 0)
                 return -1;
             m_stream->rdbuf()->str((typename Pointee::char_type*)buf);
         }
-
+        self->buf = buf;
         self->m_stream = m_stream;
         return 0;
-    }
-
-    // p_new
-    //
-    // Initialises buffer class for derived types. Compiler refuses to allow
-    // this to be a template-ised member function, due to the signature of 
-    // 'newfunc'.
-    template<class Pointee, class DerivedPolicies>
-    PyObject * iostream<Pointee, DerivedPolicies>::p_new(
-        PyTypeObject * subtype, PyObject * args, PyObject * kwds)
-    {
-        printf("In iostream::p_new\n");
-        value_type * obj = PyObject_NEW(value_type, &m_type);
-        if (obj != NULL && !PyErr_Occurred()) // If created object ok
-        {
-            obj->m_weakrefs = NULL;
-        }
-        else
-            throw_error_already_set();
-
-        printf("iostream::p_new - Creating new %s\n", typeid(Pointee).name());
-        obj->m_stream = new Pointee();
-        return (PyObject*)obj;
-    }
-
-    // p_dealloc
-    template <class Pointee, class DerivedPolicies>
-    void iostream<Pointee, DerivedPolicies>::p_dealloc(value_type * obj)
-    {
-        printf("In PyIOStream::p_dealloc\n");
-        // Allocate temporaries if needed, but do not begin destruction just yet
-        if (obj->m_weakrefs != NULL)
-        {
-            PyObject_ClearWeakRefs(reinterpret_cast<PyObject *>(obj));
-        }
-        Py_TYPE(obj)->tp_free(obj);
-    }
-
-    // p_free
-    template <class Pointee, class DerivedPolicies>
-    void iostream<Pointee, DerivedPolicies>::p_free(value_type * obj)
-    {
-        printf("In PyIOStream::p_free\n");
-        // Allocate temporaries if needed, but do not begin destruction just yet
-        delete obj->m_stream;
     }
 
     // p_repr
@@ -184,43 +111,40 @@ namespace boost { namespace python {
     template <class Pointee, class DerivedPolicies>
     PyObject* iostream<Pointee, DerivedPolicies>::p_repr(value_type * self)
     {
-        Pointee * stream = self->m_stream;
-        size_t size;
         std::streampos pos;
-        if (stream != NULL)
+        Pointee * m_iostream = self->m_stream;
+        if ((pos = m_iostream->tellg()) < 0)
         {
-            // Get the size and restore original position
-            pos = stream->tellg();
-            stream->seekg(0, stream->end);
-            size = stream->tellg();
-            stream->seekg(pos);
-        }
-        else
-        {
-            size = 0;
-            pos  = 0;
+            m_iostream->clear();
+            pos = 0;
         }
         return PyString_FromFormat(
-            "<Boost.Python.IOStream, size %lu, offset %zd at %p>",
-            size,
-            pos,
-            (PyObject*)self );
+            "<Boost.Python.IOStream, size %lu, offset %i at %p>",
+            istream_base::p_size(m_iostream),
+            int(pos),
+            (void*)m_iostream);
     }
 
     PyDoc_STRVAR( iostream_doc, "Boost Python wrapped iostream-like object.");
 
-    // type_members
-    //
-    // Initialise a dynamic array of the type's extraneous members.
-    /*
-    template <class Pointee>
-    PyMemberDef iostream<Pointee>::type_members[] =
+    // Struct to provide Python-side buffering support
+    // Have to deal with multiple inheritance, so populate
+    // istream<Pointee>::m_buffer with the missing member,
+    // from ostream<Pointee>::m_buffer
+    template <class Pointee, class DerivedPolicies>
+    PyBufferProcs iostream<Pointee, DerivedPolicies>::m_buffer =
     {
-        {const_cast<char*>("__weakref__"), T_OBJECT, offsetof(
-                  value_type, m_weakrefs), 0},
-        {0}
-    } ;
-    */
+# if PY_VERSION_HEX < 0x03000000
+        (readbufferproc)  istream_base::p_readbuf,  // bf_getreadbuffer
+        (writebufferproc) ostream_base::p_writebuf, // bf_getwritebuffer
+        (segcountproc)    istream_base::p_segcount, // bf_getsegcount
+        (charbufferproc)  istream_base::p_charbuf,  // bf_getcharbuffer
+# endif
+# if PY_VERSION_HEX >= 0x02060000
+        (getbufferproc)    base_type::p_getbuf,    // bf_getbuffer
+        (releasebufferproc)base_type::p_releasebuf // bf_releasebuffer
+# endif
+    };
 
     template <class Pointee, class DerivedPolicies>
     PySequenceMethods iostream<Pointee, DerivedPolicies>::m_sequence = {
@@ -248,30 +172,34 @@ namespace boost { namespace python {
     typename iostream<Pointee, DerivedPolicies>::object_type
         iostream<Pointee, DerivedPolicies>::m_type =
     {
-        PyObject_HEAD_INIT(NULL)
-        0                                           // ob_size
-        , const_cast<char*>("Boost.Python.IOStream")// tp_name
+        PyVarObject_HEAD_INIT(NULL, 0)
+        0 //const_cast<char*>("Boost.Python.IOStream")// tp_name
         , sizeof(value_type)                        // tp_basicsize
         , 0                                         // tp_itemsize
-        , (destructor)&p_dealloc                    // tp_dealloc
+        , (destructor)&base_type::p_dealloc         // tp_dealloc
         , 0                                         // tp_print
         , 0                                         // tp_getattr
         , 0                                         // tp_setattr
         , 0                                         // tp_compare
         , (reprfunc)&p_repr                         // tp_repr
         , 0                                         // tp_as_number
-        , &m_sequence                                         // tp_as_sequence
-        , &m_mapping                                         // tp_as_mapping
+        , &m_sequence                               // tp_as_sequence
+        , &m_mapping                                // tp_as_mapping
         , 0                                         // tp_hash 
         , 0                                         // tp_call
         , (reprfunc)&istream_base::p_str            // tp_str
         , PyObject_GenericGetAttr                   // tp_getattro
         , 0                                         // tp_setattro
         , &m_buffer                                 // tp_as_buffer
-        , Py_TPFLAGS_DEFAULT
+        , Py_TPFLAGS_DEFAULT                        //< tp_flags
           | Py_TPFLAGS_BASETYPE  
+# if PY_VERSION_HEX < 0x03000000
           | Py_TPFLAGS_HAVE_GETCHARBUFFER 
-          | Py_TPFLAGS_HAVE_WEAKREFS                //< tp_flags
+          | Py_TPFLAGS_HAVE_WEAKREFS
+#   if PY_VERSION_HEX >= 0x02060000
+          | Py_TPFLAGS_HAVE_NEWBUFFER
+#   endif
+# endif
         , iostream_doc                              // tp_doc
         , 0                                         // tp_traverse
         , 0                                         // tp_clear
@@ -289,8 +217,8 @@ namespace boost { namespace python {
         , 0                                         // tp_dictoffset
         , (initproc)&p_init                         // tp_init
         , 0                                         // tp_alloc
-        , (newfunc)&p_new                           // tp_new
-        , (freefunc)&p_free                       // tp_free
+        , (newfunc)&base_type::p_new                           // tp_new
+        , (freefunc)&base_type::p_free              // tp_free
         , 0                                         // tp_is_gc
         , 0                                         // tp_bases
         , 0                                         // tp_mro

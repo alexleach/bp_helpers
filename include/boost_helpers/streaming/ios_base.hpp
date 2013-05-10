@@ -7,9 +7,12 @@
 #include <structmember.h>   ///< for T_OBJECT
 #include <ios>
 
+//#include <boost/python/extract.hpp>
+//#include <boost/python/to_python_converter.hpp>
+#include <boost/python/converter/rvalue_from_python_data.hpp>
 #include "boost_helpers/make_threadsafe.hpp"
 
-namespace boost { namespace python { namespace converters {
+namespace boost { namespace python { namespace converter {
 
     /////////////////////////////////////////////////////////////////////////
     // ResultConverter for a C++ IO stream
@@ -42,13 +45,16 @@ namespace boost { namespace python { namespace converters {
         //    iostream_base<Pointee, DerivedPolicies> >
     {
     public:
+
         // Python object Typedefs
         typedef struct BoostPythonBuffer
         {
           PyObject_HEAD
+          void     * buf;
           PyObject * m_weakrefs;
-          Pointee  * m_stream;
-        } value_type;
+          Pointee  * m_stream;  // Pointer to I/O stream
+          bool       m_new;     // True if instantiated from Python, false if
+        } value_type;           // converted from native C++ type.
 
         typedef PyTypeObject                   object_type;
 
@@ -70,7 +76,23 @@ namespace boost { namespace python { namespace converters {
         typedef typename Pointee::seekdir          seekdir;
         //@}
 
+        //@{
+        /// \brief Static members
+        /// Objects providing support for Python iostream_base protocol:-
+        static object_type         m_type;
 
+    protected:
+        /// Could be, or should be, defined in derived classes.
+        static PyMemberDef       m_members[];
+        /// PyBufferProcs for the old-style buffer protocol:-
+        static PyBufferProcs        m_stream; 
+        /// PyMappingMethods for the mapping protocol:-
+        static PyMappingMethods    m_mapping;
+        /// PySequenceMethods for the sequence protocol:-
+        static PySequenceMethods  m_sequence;
+        //@}
+
+    public:
         //@{ ctor overloads, same as in `bp::str`.
         iostream_base(void);
         iostream_base(const char* s);
@@ -90,39 +112,34 @@ namespace boost { namespace python { namespace converters {
 
         //@{
         ///  Boost Python converter requirements
-        static bool   convertible(void) { printf("checking iostream-base convertible\n"); return true; }
-        static PyObject * convert(Pointee & value);
+        static void     construct(PyObject* self,
+                                  rvalue_from_python_stage1_data* data);
+        static PyObject * convert(Pointee const & value);
+        static void*   convertible(PyObject* ptr);
 
   #ifndef BOOST_PYTHON_NO_PY_SIGNATURES
         static object_type const * get_pytype();
   #endif
         //@}
 
-        //@{
-        /// \brief Static members
-        /// Objects providing support for Python iostream_base protocol:-
-        static object_type         m_type;
-
     protected:
-        /// Could be, or should be, defined in derived classes.
-        static PyMemberDef       m_members[];
-        /// PyBufferProcs for the old-style buffer protocol:-
-        static PyBufferProcs        m_stream; 
-        /// PyMappingMethods for the mapping protocol:-
-        static PyMappingMethods    m_mapping;
-        /// PySequenceMethods for the sequence protocol:-
-        static PySequenceMethods  m_sequence;
-        //@}
-
         //@{
         /// Generic PyTypeObject member functions:
-        static PyObject* p_new(object_type * subtype,
-                               PyObject    * args,
-                               PyObject    * kwds);
-        static void  p_dealloc(value_type  * obj);
-        static PyObject* p_repr(value_type * self);
+        static value_type* p_new(object_type * subtype,
+                                 PyObject    * args,
+                                 PyObject    * kwds);
+        static void    p_dealloc(value_type  * self);
+        static void       p_free(value_type  * self);
+        static PyObject * p_repr(value_type  * self);
         //@}
 
+        //@{
+        /// PyBufferProcs members
+# if PY_VERSION_HEX >= 0x02060000
+        static int  p_getbuf(value_type * self, Py_buffer * view, int flags);
+        static void p_releasebuf(value_type * self, Py_buffer * view);
+# endif
+        //@}
     };
 
 
