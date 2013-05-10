@@ -17,6 +17,19 @@ def tearDownModule():
 
 import gc, sys
 
+# handy switch to turn off all this output
+PRINT_INFO = True
+
+def print_info(buf):
+    if PRINT_INFO:
+        print( "   Size  : {0}".format(sys.getsizeof(buf)))
+        print( "   Dir   : {0}".format(dir(buf)) )
+        print( "   cl    : {0}".format(buf.__class__) )
+        print( "   Dir(cl):{0}".format(dir(buf.__class__)) )
+        print( "   repr  : {0}".format(repr(buf)) )
+        print( "   str   : {0}".format(str(buf)) )
+        print( "   type  : {0}".format(type(buf)) )
+
 class TestIOStreamBase(unittest.TestCase):
     """Test IOStream objects returned from a function."""
     def setUp(self):
@@ -29,26 +42,16 @@ class TestIStream(TestIOStreamBase):
         istream = self.container.istream
         is2 = istream
         del self.container
-        print istream
-        print is2
+        print(istream)
+        print(is2)
         return istream
 
     def test_istream_features(self):
         #This also works
         buf = self.container.istream
-        print "Istream state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("Istream state:-")
+        print_info(buf)
         gc.collect()
-
-    def test_istream_init_w_string(self):
-        from iostreams import IStream
-        buf = IStream("foo bar baz")
-        self.assertEqual(str(buf), "foo bar baz")
 
     def _test_make_5_istreams(self):
         from iostreams import Container
@@ -74,20 +77,36 @@ class TestOStream(TestIOStreamBase):
         ostream = self.container.ostream
         os2 = ostream
         del self.container
-        print os2
+        print(os2)
         return ostream
 
     def test_ostream_features(self):
         #This also works
         buf = self.container.ostream
-        print "Ostream state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("Ostream state:-")
+        print_info(buf)
         gc.collect()
+
+    def test_get_ostream(self):
+        buf = self.container.get_ostream()
+        del(buf)
+
+    def test_ostream_concat(self):
+        buf = self.container.get_ostream()
+        buf2 = self.container.ostream
+        buf = buf + buf2
+
+    def test_ostream_setitem(self):
+        # Can write to it, but we can't read it!
+        buf = self.container.get_ostream()
+        buf[0:4] = "foo "
+        buf[0]  = "b"
+
+    def _test_default_get_ostream(self):
+        default_buf = self.container.get_internal_reference_ostream()
+        buf = self.container.get_ostream()
+        getsize = sys.getsizeof
+        self.assertGreater(getsize(default_buf), getsize(buf))
 
     def _test_make_5_ostreams(self):
         from iostreams import Container
@@ -95,7 +114,7 @@ class TestOStream(TestIOStreamBase):
         for i in xrange(5):
             container = Container()
             buffered_objects.append( container.ostream )
-        print "made 5 ostreams"
+        print("made 5 ostreams")
         del(buffered_objects[4])
 
     ### TO IMPLEMENT IN THE CODE!!! ###
@@ -121,13 +140,8 @@ class TestIOStream(TestIOStreamBase):
     def test_iostream_features(self):
         #This also works
         buf = self.container.iostream
-        print "IOstream state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("IOstream state:-")
+        print_info(buf)
         gc.collect()
 
     def test_iostream_init_w_string(self):
@@ -139,13 +153,35 @@ class TestIOStream(TestIOStreamBase):
         buf = IOStream(bytearray("foo bar baz"))
         self.assertEqual(str(buf), "foo bar baz")
 
+    def test_iostream_setitem(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("foo"))
+        buf[0] = "b"
+        self.assertEqual(str(buf), "boo")
+        buf[-1]  = "f"
+        self.assertEqual(str(buf), "bof")
+
+    def test_iostream_setslice(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("foo bar baz"))
+        buf[:3] = "baz"
+        self.assertEqual(str(buf), "baz bar baz")
+        buf[-1] = 'y'
+        print('buffer: ', buf)
+        size = 5
+        offset = len(buf) + size
+        buf[offset:offset+size] = "x" * size
+        print('buffer: ', buf)
+        buf[offset:offset] = "x" * size
+        print('buffer: ', buf)
+
     def _test_make_5_iostreams(self):
         from iostreams import Container
         buffered_objects = []
         for i in xrange(5):
             container = Container()
             buffered_objects.append( container.iostream )
-        print "made 5 iostreams"
+        print("made 5 iostreams")
         del(buffered_objects[4])
 
 class TestIStreamInstance(unittest.TestCase):
@@ -157,32 +193,48 @@ class TestIStreamInstance(unittest.TestCase):
         istream = self.istream("foo bar baz")
         is2 = istream
         del self.istream
-        print is2
+        print(is2)
         return istream
 
     def test_istream_class_features(self):
         buf = self.istream
-        print "\nIstream Class state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   cl    : {0}".format(buf.__class__)
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("\nIstream Class state:-")
+        print_info(buf)
         gc.collect()
+
+    def test_istream_init_w_string(self):
+        buf = self.istream("foo bar baz")
+        self.assertEqual(str(buf), "foo bar baz")
 
     def test_istream_instance_features(self):
         buf = self.istream("foo bar baz")
-        print "\nIstream Instance state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   cl    : {0}".format(buf.__class__)
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("\nIstream Instance state:-")
+        print_info(buf)
         gc.collect()
+
+    def test_istream_length(self):
+        buf = self.istream("foo")
+        self.assertEqual(len(buf), 3)
+
+    def test_istream_repeat(self):
+        buf = self.istream("foo ")
+        self.assertEqual( buf * 3, "foo foo foo ")
+
+    def test_istream_slice(self):
+        buf = self.istream("foo bar baz")
+        self.assertEqual(buf[-3:],  "baz")
+
+    def test_istream_slice_fail(self):
+        buf = self.istream("foo bar baz")
+        self.assertEqual(buf[-3:3], "")
+
+    def test_istream_subscript(self):
+        buf = self.istream("foo bar baz")
+        self.assertEqual(buf[0], "f")
+
+    def test_istream_subscript_string_fails(self):
+        buf = self.istream("foo bar baz")
+        self.assertRaises(TypeError, buf.__getitem__, "foo")
 
 class TestIOStreamInstance(unittest.TestCase):
     def setUp(self):
@@ -193,44 +245,96 @@ class TestIOStreamInstance(unittest.TestCase):
         iostream = self.iostream
         ios2 = iostream
         del self.iostream
-        print ios2
         return iostream
 
     def test_iostream_class_features(self):
         #This also works
         buf = self.iostream.__class__
-        print "\nIOstream Class state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   cl    : {0}".format(buf.__class__)
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
-        print " type(cl): {0}".format(type(buf.__class__))
+        print("\nIOstream Class state:-")
+        print_info(buf)
         gc.collect()
 
     def test_iostream_instance_features(self):
         #This also works
         buf = self.iostream
-        print "\nIOstream Instance state:-"
-        print "   Size  : {0}".format(sys.getsizeof(buf))
-        print "   Dir   : {0}".format(dir(buf))
-        print "   Dir(cl):{0}".format(dir(buf.__class__))
-        print "   repr  : {0}".format(repr(buf))
-        print "   str   : {0}".format(str(buf))
-        print "   type  : {0}".format(type(buf))
+        print("\nIOstream Instance state:-")
+        print_info(buf)
         gc.collect()
 
-class TestDerivedIOStream(unittest.TestCase):
+class TestDerivedBaseIOStream(unittest.TestCase):
     """Run tests on a class derived from an IOstream, and registered with 
-    bp::class_<.., boost::python::bases<..> >"""
+    boost::python::bases<..> in the class_<> instantiation."""
+    def setUp(self):
+        from iostreams import DerivedBaseIOStream
+        self.cl = DerivedBaseIOStream
+
+    def test_init_gc(self):
+        buf = self.cl()
+
+    def test_features(self):
+        buf = self.cl()
+        print_info(buf)
+
+class TestDerivedIOStream(unittest.TestCase):
+    """Run tests on a class derived from an IOstream, but not registered with 
+    boost::python::bases<..>.
+    When test_features runs, it can be seen that instance sizes are twice the
+    size of instances created when using bases<..>"""
     def setUp(self):
         from iostreams import DerivedIOStream
         self.cl = DerivedIOStream
 
     def test_init_gc(self):
-        inst = self.cl()
+        buf = self.cl()
+
+    def test_features(self):
+        buf = self.cl()
+        print_info(buf)
+
+class TestBufferIOStream(unittest.TestCase):
+    """Test that a normal buffer() object can understance a wrapped IOStream"""
+    def make_iostream(self):
+        from iostreams import IOStream
+        return IOStream(bytearray("foo bar baz"))
+
+    def test_init(self):
+        x = buffer(self.make_iostream())
+
+    def test_index(self):
+        buf = buffer(self.make_iostream())
+        iostream = self.make_iostream()
+        self.assertEqual(buf[1], iostream[1])
+        self.assertEqual(buf[-2], iostream[-2])
+
+    def test_slice(self):
+        buf = buffer(self.make_iostream())
+        iostream = self.make_iostream()
+        self.assertEqual(buf[0:3], iostream[0:3])
+        self.assertEqual(buf[-3:], iostream[-3:])
+
+    def test_str(self):
+        buf = buffer(self.make_iostream())
+        iostream = self.make_iostream()
+        self.assertEqual(str(buf), str(iostream))
+
+class TestMemoryviewIOStream(unittest.TestCase):
+    """Test that a normal buffer() object can understance a wrapped IOStream"""
+    def make_iostream(self):
+        from iostreams import IOStream
+        return IOStream(bytearray("foo bar baz"))
+
+    def test_init(self):
+        memview = memoryview(self.make_iostream())
+
+    def test_index(self):
+        memview = memoryview(self.make_iostream())
+        iostream = self.make_iostream()
+        self.assertEqual(memview[3], iostream[3])
+
+    def test_slice(self):
+        memview = memoryview(self.make_iostream())
+        iostream = self.make_iostream()
+        self.assertEqual(memview[3:6], iostream[3:6])
 
 if __name__ == "__main__":
     unittest.main()
