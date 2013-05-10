@@ -190,6 +190,8 @@ namespace boost { namespace python { namespace converter {
         value_type * self, Py_buffer * view, int flags)
     {
         printf("In iostream_base::p_getbuf\n");
+        if (self->buf == NULL)
+            printf("buffer is null!\n");
         return PyBuffer_FillInfo(view, reinterpret_cast<PyObject*>(self),
                                  self->buf, Py_SIZE(self), 0, flags);
     }

@@ -319,21 +319,40 @@ class TestBufferIOStream(unittest.TestCase):
 
 class TestMemoryviewIOStream(unittest.TestCase):
     """Test that a normal buffer() object can understance a wrapped IOStream"""
-    def make_iostream(self):
+    def init_iostream(self):
         from iostreams import IOStream
         return IOStream(bytearray("foo bar baz"))
 
+    def return_iostream(self):
+        from iostreams import Container
+        return Container().iostream
+
     def test_init(self):
-        memview = memoryview(self.make_iostream())
+        memview = memoryview(self.init_iostream())
 
     def test_index(self):
-        memview = memoryview(self.make_iostream())
-        iostream = self.make_iostream()
+        memview = memoryview(self.init_iostream())
+        iostream = self.init_iostream()
         self.assertEqual(memview[3], iostream[3])
 
     def test_slice(self):
-        memview = memoryview(self.make_iostream())
-        iostream = self.make_iostream()
+        memview = memoryview(self.init_iostream())
+        iostream = self.init_iostream()
+        self.assertEqual(memview[3:6], iostream[3:6])
+
+    def test_return(self):
+        from iostreams import IOStream, Container
+        iostream = self.return_iostream()
+        memview = memoryview(self.return_iostream())
+
+    def test_return_index(self):
+        memview = memoryview(self.return_iostream())
+        iostream = self.return_iostream()
+        self.assertEqual(memview[3], iostream[3])
+
+    def test_return_slice(self):
+        memview = memoryview(self.return_iostream())
+        iostream = self.return_iostream()
         self.assertEqual(memview[3:6], iostream[3:6])
 
 if __name__ == "__main__":
