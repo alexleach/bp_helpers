@@ -19,50 +19,40 @@ namespace boost { namespace python {
         // and finally iostream into the registry, assuming they are not there
         // already. It also registers to_python converters at the same time, and
         // registers the full type hierarchy whilst it's at it.
-        template <class T>
+        template <class T,
+                  class DerivedPolicies 
+                      = detail::final_iostream_derived_policies<T> >
         struct register_iostream_pytype
-            : register_istream_pytype<T>, register_ostream_pytype<T>
+            : register_istream_pytype<T, DerivedPolicies>,
+            register_ostream_pytype<T, DerivedPolicies>
         {
-            typedef iostream<T> stream_t;
+            typedef iostream<T, DerivedPolicies>      stream_t;
+            typedef typename stream_t::object_type object_type;
 
             register_iostream_pytype(void)
-                : register_istream_pytype<T>(), register_ostream_pytype<T>()
+                : register_istream_pytype<T, DerivedPolicies>(),
+                register_ostream_pytype<T, DerivedPolicies>()
             {
+
                 printf("  Looking up IOStream: %s \n", typeid(T).name());
-                // Insert type_id into registry
+                /*
                 converter::registration& iostream_converter
                     = const_cast<converter::registration&>(
-                        converter::registry::lookup(type_id<T>()) );
+                        converter::registry::lookup(type_id<stream_t>()) );
 
                 if (iostream_converter.m_class_object == 0)
-                {
-                    printf("  Registering IOStream: %s \n", typeid(T).name());
-                    // Put the new PyTypeObject in to the registry.
-                    iostream_converter.m_class_object = &stream_t::m_type;
+                    iostream_converter.m_class_object = &DerivedPolicies::m_type;
+                */
 
-                    // Insert iostream to_python converter into registry
-                    converter::registry::insert(
-                        (converter::to_python_function_t)&stream_t::convert,
-                        boost::python::type_id<T>(),
-                        &stream_t::get_pytype );
-                }
-                else
-                {
-                    iostream_converter.m_class_object = &stream_t::m_type;
-                    iostream_converter.m_to_python
-                        = (converter::to_python_function_t)&stream_t::convert;
-                }
                 // Register istream as a base class.
-                register_istream_pytype<T>();
-                typedef typename stream_t::istream_base istream_base;
-                objects::register_dynamic_id<istream_base>();
-                objects::register_conversion<stream_t, istream_base>(false);
+                //typedef typename stream_t::istream_base istream_base;
+                //objects::register_dynamic_id<istream_base>();
+                //objects::register_conversion<stream_t, istream_base>(false);
 
                 // Register ostream as a base class.
-                register_ostream_pytype<T>();
-                typedef typename stream_t::ostream_base ostream_base;
-                objects::register_dynamic_id<ostream_base>();
-                objects::register_conversion<stream_t, ostream_base>(false);
+                //typedef typename stream_t::ostream_base ostream_base;
+                //objects::register_dynamic_id<ostream_base>();
+                //objects::register_conversion<stream_t, ostream_base>(false);
             }
         };
     }
@@ -70,24 +60,56 @@ namespace boost { namespace python {
     // Make a PyTypeObject that follows the C++ STL istream protocol.
     //
     // @param Pointee - C++ class to expose to Python
-    template <class Pointee>
-    iostream<Pointee> make_iostream_type_object(void)
-    { 
-        printf("making Python version of iostream type object %s\n",
-            type_id<Pointee>().name());
-        typedef typename boost::python::iostream<Pointee> iostream_t;
+    template <class Pointee,
+              class DerivedPolicies 
+                  = detail::final_iostream_derived_policies<Pointee> >
+    struct make_iostream_type_object
+    {
+        typedef typename
+            boost::python::iostream<Pointee, DerivedPolicies> stream_t;
 
-        iostream_t::m_type.tp_name
-            = const_cast<char*>(type_id<Pointee>().name());
-        iostream_t::m_type.tp_base = iostream_t::base_type::m_type.tp_base;
+        make_iostream_type_object(const char * name = NULL)
+            : m_stream_wrapper()
+        { 
+            printf("make_iostream_type object<%s>(%s)\n",
+                type_id<Pointee>().name(), name);
 
-        if (PyType_Ready(&iostream_t::m_type) < 0)
-            boost::python::throw_error_already_set();
+            objects::register_iostream_pytype<Pointee, DerivedPolicies> reg;
 
-        Py_INCREF(&iostream_t::m_type);
-        objects::register_iostream_pytype<Pointee>();
-        return iostream_t();
-    }
+            add_type_to_module<Pointee>(&stream_t::m_type, name);
+
+            // need to get into the class scope!
+            //scope ob_scope = object(module.attr(stream_t::m_type.tp_name));
+
+            //printf("class scope name : %s\n",
+            //    PyString_AsString(object(ob_scope.attr("__name__")).ptr());
+            // then add the functions
+            //m_stream_wrapper.extension_def();
+
+
+            //stream_t::m_type.tp_name = type_id<Pointee>().name();
+
+            //typename iostream_t::istream_base istream_base
+            //    = make_istream_type_object<Pointee, DerivedPolicies>();
+
+            //typename iostream_t::ostream_base ostream_base
+            //    = make_ostream_type_object<Pointee, DerivedPolicies>();
+        }
+
+        stream_t& operator()(void)
+        {
+            printf("make_iostream_type_object::operator()\n");
+            //stream_t iostream_holder;
+
+
+            // The constructor, which adds method definitions, needs to be in
+            // right scope to work.. Best way?
+            return m_stream_wrapper;
+        }
+
+    private:
+        stream_t m_stream_wrapper;
+    };
 
 }  } // End boost::python namespace
 

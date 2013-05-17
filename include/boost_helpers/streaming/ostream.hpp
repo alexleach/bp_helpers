@@ -40,7 +40,8 @@ namespace boost { namespace python {
         typedef converter::iostream_base<Pointee, DerivedPolicies> base_type;
         typedef ostream<Pointee, DerivedPolicies>              container_type;
         typedef typename base_type::value_type   value_type;
-        typedef typename base_type::object_type object_type;
+        //typedef typename base_type::object_type object_type;
+        typedef PyTypeObject                                  object_type;
         //@}
 
         //@{ C++ Standard typedefs
@@ -81,13 +82,7 @@ namespace boost { namespace python {
         //@}
 
         /// dtor
-        ~ostream() { }
-
-        //@{
-        /// Call operators
-        PyObject* operator()(void);
-        PyObject* operator()(Pointee& other);
-        //@}
+        virtual ~ostream() { }
 
         //@{
         // PyTypeObject members
@@ -97,6 +92,7 @@ namespace boost { namespace python {
         // PyBufferProcs functions enabling C++ iostream support in Python ostream
         // objects
         static PyObject * p_repr(value_type   * self);
+        static PyObject *  p_str(value_type  * self);
         //@}
 
     # if PY_VERSION_HEX < 0x03000000
@@ -123,20 +119,37 @@ namespace boost { namespace python {
                                      Py_ssize_t right, PyObject* other);
         //@}
 
-        // Boost Python visitor requirements (register Python-side methods)
-        /*
-        template <class Class>
-        static void extension_def(Class &cl);
-        */
+        //@{
+        /// Boost Python visitor requirements (register Python-side methods)
+        void extension_def(void);
+        //@}
 
-        // PyMethodDef functions. i.e. `value_type` instance methods
-        static Pointee & p_write_int(Pointee&, int value);
+        //@{
+        /// PyMethodDef functions. i.e. PyObject * (value_type) methods
+        /// These should be added to the object's namespace by the class
+        /// constructor.
+        static value_type * p_write_int(value_type * self, int value);
+        value_type * write(value_type * self, std::string const & value);
+        //@}
 
-    private:
-        static size_t p_size(Pointee * ptr);
-        static size_t p_tell(Pointee * ptr);
+        //@{
+        // Generic attribute getter and setter for the PyTypeObject.
+        static object_type const * get_pytype(void);
+        static object_type * set_pytype(void);
+        //@}
+
+        //@{
+        /// PyObject (value_type) methods available from Python.
+        //@}
+
+    protected:
+        static int p_del_slice(Pointee * self, Py_ssize_t left, Py_ssize_t right);
+        static int_type p_size(Pointee * ptr);
+        static pos_type p_tell(Pointee * ptr);
         static Pointee* p_seek(Pointee* ptr, pos_type pos);
         static Pointee* p_seek(Pointee* ptr, off_type offset, seekdir way);
+
+    private:
         static void check_seek_state(Pointee * ptr);
     };
 

@@ -41,13 +41,14 @@ namespace boost { namespace python {
         //@{
         /// IStream wrapper typedefs
         // Shortcut typedef for the base class template.
-        typedef converter::iostream_base<Pointee, DerivedPolicies> base_type;
+        typedef converter::iostream_base<Pointee, DerivedPolicies>  base_type;
         // Shortcut typedef for this class template
         typedef istream<Pointee, DerivedPolicies>              container_type;
         // PyObject being managed
         typedef typename base_type::value_type    value_type;
         // PyTypeObject being managed
-        typedef typename base_type::object_type  object_type;
+        //typedef typename base_type::object_type  object_type;
+        typedef PyTypeObject  object_type;
         //@}
 
         //@{ C++ Standard typedefs
@@ -94,10 +95,6 @@ namespace boost { namespace python {
         // dtor
         ~istream() { }
 
-        // caller.. Needed?
-        PyObject* operator()(void);
-        PyObject* operator()(Pointee& other);
-
         //@{
         /// PyTypeObject member functions
         static int       p_init(value_type  * self,
@@ -124,6 +121,9 @@ namespace boost { namespace python {
         static Py_ssize_t p_charbuf(value_type* self, Py_ssize_t idx, void **pp);
         //@}
     # endif
+    # if PY_VERSION_HEX >= 0x0206000
+        static int p_getbuf(value_type* self, Py_buffer* view, int flags);
+    # endif
 
         //@{
         /// PyMappingMethods functions:-
@@ -143,18 +143,23 @@ namespace boost { namespace python {
                                    Py_ssize_t right, PyObject* other);
         //@}
 
+        // Getter for the PyTypeObject.
+        static object_type const * get_pytype(void);
+        static object_type * set_pytype(void);
+
     protected:
         //@{
         /// Protected members callable from this and derived classes.
         // get buffer size
-        static size_t p_size(Pointee * ptr);
-        static size_t p_tell(Pointee * ptr);
+        static int_type p_size(Pointee * ptr);
+        static pos_type p_tell(Pointee * ptr);
         // seekg() helpers
         static Pointee* p_seek(Pointee* ptr, pos_type pos);
         static Pointee* p_seek(Pointee* ptr, off_type offset, seekdir way);
         //@}
+
     private:
-        /// Called by p_seek methods, to throw an appropriate exception if an
+        /// Called by p_seek methods, to throw a simple C++ exception if an
         /// operation failed.
         static void check_seek_state(Pointee * ptr);
 

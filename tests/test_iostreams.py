@@ -102,6 +102,10 @@ class TestOStream(TestIOStreamBase):
         buf[0:4] = "foo "
         buf[0]  = "b"
 
+    def test_ostream_write(self):
+        buf = self.container.ostream
+        buf.write("written into the buffer")
+
     def _test_default_get_ostream(self):
         default_buf = self.container.get_internal_reference_ostream()
         buf = self.container.get_ostream()
@@ -131,11 +135,6 @@ class TestOStream(TestIOStreamBase):
 class TestIOStream(TestIOStreamBase):
     """Test return value policy features on std::iostream-like object.
     Actually runs tests on a class derived from `std::stringstream`"""
-    def test_weakref_iostream(self):
-        iostream = self.container.iostream
-        ios2 = iostream
-        del self.container
-        self.assertEqual(ios2, iostream)
 
     def test_iostream_features(self):
         #This also works
@@ -145,13 +144,44 @@ class TestIOStream(TestIOStreamBase):
         gc.collect()
 
     def test_iostream_init_w_string(self):
+        # string is immutable. The "O" in IO stream doesn't like that!
         from iostreams import IOStream
-        self.assertRaises(TypeError, IOStream, "foo bar baz" )
+        self.assertRaises(BufferError, IOStream, "foo bar baz" )
 
     def test_iostream_init_w_bytearray(self):
         from iostreams import IOStream
         buf = IOStream(bytearray("foo bar baz"))
         self.assertEqual(str(buf), "foo bar baz")
+
+    def test_len(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("foo bar"))
+        self.assertEqual(len(buf), len("foo bar"))
+
+    def test_iostream_delitem(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("abcdef"))
+        del(buf[1])
+        _cmp = bytearray("abcdef")
+        del(_cmp[1])
+        self.assertEqual(str(buf), str(_cmp))
+
+    def test_iostream_delslice(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("foo bar"))
+        _cmp = bytearray("foo bar")
+        del(buf[2:4])
+        del(_cmp[2:4])
+        self.assertEqual(str(buf), str(_cmp))
+
+    def test_iostream_delslice_step(self):
+        from iostreams import IOStream
+        buf = IOStream(bytearray("abcdefghijkl"))
+        _cmp = bytearray("abcdefghijkl")
+        _slice = slice(2,11,5)
+        del(buf[_slice])
+        del(_cmp[_slice])
+        self.assertEqual(str(buf), str(_cmp))
 
     def test_iostream_setitem(self):
         from iostreams import IOStream
@@ -174,6 +204,19 @@ class TestIOStream(TestIOStreamBase):
         print('buffer: ', buf)
         buf[offset:offset] = "x" * size
         print('buffer: ', buf)
+        del(buf)
+        print ''
+
+    def test_write(self):
+        iostream = self.container.iostream
+        iostream.write("this has been written")
+        print iostream
+
+    def test_weakref_iostream(self):
+        iostream = self.container.iostream
+        ios2 = iostream
+        del self.container
+        self.assertEqual(ios2, iostream)
 
     def _test_make_5_iostreams(self):
         from iostreams import Container
@@ -213,8 +256,8 @@ class TestIStreamInstance(unittest.TestCase):
         gc.collect()
 
     def test_istream_length(self):
-        buf = self.istream("foo")
-        self.assertEqual(len(buf), 3)
+        buf = self.istream("foo bar")
+        self.assertEqual(len(buf), len("foo bar"))
 
     def test_istream_repeat(self):
         buf = self.istream("foo ")
@@ -235,31 +278,6 @@ class TestIStreamInstance(unittest.TestCase):
     def test_istream_subscript_string_fails(self):
         buf = self.istream("foo bar baz")
         self.assertRaises(TypeError, buf.__getitem__, "foo")
-
-class TestIOStreamInstance(unittest.TestCase):
-    def setUp(self):
-        from iostreams import IOStream
-        self.iostream = IOStream()
-
-    def test_weakref_iostream(self):
-        iostream = self.iostream
-        ios2 = iostream
-        del self.iostream
-        return iostream
-
-    def test_iostream_class_features(self):
-        #This also works
-        buf = self.iostream.__class__
-        print("\nIOstream Class state:-")
-        print_info(buf)
-        gc.collect()
-
-    def test_iostream_instance_features(self):
-        #This also works
-        buf = self.iostream
-        print("\nIOstream Instance state:-")
-        print_info(buf)
-        gc.collect()
 
 class TestDerivedBaseIOStream(unittest.TestCase):
     """Run tests on a class derived from an IOstream, and registered with 

@@ -63,7 +63,6 @@ namespace boost { namespace python {
         // Until I find a use for this, I won't bother automating it in the
         // public headers.
 
-        /*
         template <>
         struct object_manager_traits< istream<test_io_streams::IStream> >
             : pytype_object_manager_traits<
@@ -87,7 +86,6 @@ namespace boost { namespace python {
                 , iostream<test_io_streams::IOStream>
               >
         { };
-        */
 
     } /* -- end converter namespace */
 
@@ -101,15 +99,15 @@ namespace test_io_streams {
     {
         // Register to_python conversions and add the object type IDs to the
         // Boost Python registry.
-        bpl::istream<IStream>   m_istream  = bpl::make_istream_type_object<IStream>();
-        bpl::ostream<OStream>   m_ostream  = bpl::make_ostream_type_object<OStream>();
-        bpl::iostream<IOStream> m_iostream = bpl::make_iostream_type_object<IOStream>();
+        bpl::istream<IStream>   m_istream  = bpl::make_istream_type_object<IStream>("IStream")();
+        bpl::ostream<OStream>   m_ostream  = bpl::make_ostream_type_object<OStream>("OStream")();
+        bpl::iostream<IOStream> m_iostream = bpl::make_iostream_type_object<IOStream>("IOStream")();
 
         // Add object to current namespace. This makes the class instantiable
         // from within Python.
-        bpl::add_type_to_module<IStream>(&m_istream.m_type,   "IStream");
-        bpl::add_type_to_module<OStream>(&m_ostream.m_type,   "OStream");
-        bpl::add_type_to_module<IOStream>(&m_iostream.m_type, "IOStream");
+        //bpl::add_type_to_module<IStream>(&m_istream.m_type,   "IStream");
+        //bpl::add_type_to_module<OStream>(&m_ostream.m_type,   "OStream");
+        //bpl::add_type_to_module<IOStream>(&m_iostream.m_type, "IOStream");
 
         // The class_<> template mechanisms don't allow the use of a custom
         // PyTypeObject, so unfortunately it can't be used if we want to get any
@@ -166,7 +164,7 @@ namespace test_io_streams {
             ;
 
         bpl::class_<DerivedIOStream, boost::noncopyable >
-            ("DerivedIOStream", "This will fail to use the right PyTypeObject.")
+            ("DerivedIOStream", "This should fail to use the right PyTypeObject.")
             ;
 
         bpl::class_<DerivedIOStream, boost::noncopyable, bpl::bases<IOStream> >
