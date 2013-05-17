@@ -172,13 +172,16 @@ namespace boost { namespace python { namespace detail {
   //
   // @param Pointee - C++ class to expose to Python
   template <class Pointee>
-  PyTypeObject make_buffer_type_object(void)
+  PyTypeObject make_buffer_type_object(const char * name = 0)
   { 
       printf("making Python version of IO stream-like object\n");
       //typedef typename boost::python::buffer<Pointee>   p_t;
 
-      buffer<Pointee>::object_t.tp_name
-          = const_cast<char*>(type_id<Pointee*>().name());
+      if (name == 0)
+          buffer<Pointee>::object_t.tp_name = type_id<Pointee>().name();
+      else
+          buffer<Pointee>::object_t.tp_name = name;
+
       if (PyType_Ready(&buffer<Pointee>::object_t) < 0)
           boost::python::throw_error_already_set();
       boost::python::register_buffer_pytype<Pointee> x;

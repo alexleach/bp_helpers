@@ -1,15 +1,13 @@
 #  bp_helpers
-=============
 
 ###### Reusable code for exposing C++ code to Python, using Boost Python
 
 
 ## Introduction
-================
 
 These are some pieces of semi-resuable code I've been using, whilst exposing
 a C++ library to Python. The most reusable pieces of code here are no
-doubt the parts that help expose standards-compliant templates.
+doubt the parts that help expose C++ standards-compliant classes.
 
 This little repository contains several C++ headers for use with Boost
 Python, a couple of source files, as well as a Makefile and some
@@ -17,7 +15,6 @@ Python unit tests.
 
 
 ### Getting started
-===================
 
 Well, the code here is only going to be useful if you've already got 
 started with Boost Python. Still, if you want to test that it all works,
@@ -36,6 +33,24 @@ before running tests on the exposed interfaces.
 ### Exposing C++ STL iostream's
 ===============================
 
+This became a project in itself. The [C++ ios library] contains a fairly large
+collection of abstract and specialised classes. Initially, I used a [single
+header file][buffer.hpp] in an attempt to have a generic template that could be 
+used to wrap any standard-compliant iostream. A complimentary header file was
+written, containing both a Boost Python [CallPolicy] and [HolderGenerator].
+These are described below, and example usage is demonstrated in
+[return_buffer_object.cpp] and [test_buffer_object.py].
+
+#### New iostream wrappers
+--------------------------
+
+It soon became apparent that one template class was not enough to cover all the
+bases of the C++ iostream library. The new bp_helper wrappers for the iostreams
+are now documented in a [separate page][iostream wrappers].
+
+#### Old iostream wrapper
+-------------------------
+
 - Header Files:-
   - [buffer.hpp]
 
@@ -50,9 +65,6 @@ before running tests on the exposed interfaces.
     template. These can be used by Boost Python code to wrap iostream-like 
     objects to a `PyTypeObject`'s internal `PyBufferProcs` struct. This 
     essentially enables buffering at Python's C-API level.
-- And their corresponding source files:-
-  - [buffer.cpp]
-  - [return_buffer_object.cpp]
 
 
 ### Exposing std::list
@@ -135,6 +147,12 @@ everything here properly platform independent.
 
 [1]: http://docs.python.org/2/c-api/buffer.html#old-style-buffer-objects
 
+[C++ io library]: http://www.cplusplus.com/reference/ios/
+[CallPolicy]: http://www.boost.org/doc/libs/1_53_0/libs/python/doc/v2/CallPolicies.html#CallPolicies-concept
+[ResultConverter]: http://www.boost.org/doc/libs/1_53_0/libs/python/doc/v2/ResultConverter.html#ResultConverter-concept
+[ResultConverterGenerator]: http://www.boost.org/doc/libs/1_53_0/libs/python/doc/v2/ResultConverter.html#ResultConverterGenerator-concept
+
+[iostream wrappers]: ./IOSTREAM.md
 [buffer.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/buffer.hpp
 [converters.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/converters.hpp
 [get_object_id.hpp]: https://github.com/alexleach/bp_helpers/blob/master/include/boost_helpers/get_object_id.hpp
@@ -152,6 +170,4 @@ everything here properly platform independent.
 [tests/test_buffer_object.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_buffer_object.py
 [tests/test_make_list.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_make_list.py
 [tests/test_refcounted_object.py]: http://github.com/alexleach/bp_helpers/blob/master/tests/test_refcounted_object.py
-
-
 

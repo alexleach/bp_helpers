@@ -61,7 +61,7 @@ def compile_test(test_name, src_filename=None):
         language = 'c++',
         libraries = ['boost_python']
         )
-    sys.argv += ["build_ext", "--inplace"]
+    sys.argv += ["build", "build_ext", "--inplace"]
     try:
         setup(
             name=test_name,

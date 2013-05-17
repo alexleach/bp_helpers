@@ -28,7 +28,7 @@ namespace boost { namespace python {
     // Get the last component of a fully-qualified C++ type id.
     // @param T - type of which to get the ID.
     template <class T>
-    const char* unqualify_id(void);
+    const char* unqualify_id(bool cut_template = false);
 
 }   }
 
@@ -38,16 +38,35 @@ inline object_id_type boost::python::get_object_id(boost::python::object& obj)
 }
 
 template <class T>
-inline const char * boost::python::unqualify_id(void)
+inline const char * boost::python::unqualify_id(bool cut_template)
 {
     // Get the fully qualified name.
     const char* full_name = type_id<T>().name();
     size_t idx = strlen(full_name) - 1;
-    // Loop backwards through the name, until we reach a ':'
-    while ((full_name[idx-1] != ':') && (idx > 0))
-        idx--;
+    size_t i = 0, last_sep = 0;
+    register char c;
+    // Loop through the name, until we reach a '<' char, or the end.
+    while (i < idx)
+    {
+        c = full_name[i];
+        if (c == ':')
+        {
+            i++; // skip the next ':'
+            last_sep = i + 1; // record the start position of next namespace
+        }
+        else if (c == '<' && cut_template == true)
+        {
+            // delete the template stuff
+            char * name = new char[i+1];
+            strncpy(name, full_name, i);
+            full_name = const_cast<const char*>(name);
+            break;
+        }
+        i++;
+    }
+
     // Slice full_name to be an unqualified name:-
-    return &full_name[idx];
+    return &full_name[last_sep];
 }
 
 #endif

@@ -192,7 +192,7 @@ namespace boost { namespace python {
             //status,
             //&stream,
             BUFSIZ,
-            stream->tellg(),
+            Py_ssize_t(stream->tellg()),
             &stream);
     }
 
@@ -225,7 +225,7 @@ namespace boost { namespace python {
         printf("calling buffer\n");
         if (object_t.tp_name == 0)
         {
-            object_t.tp_name = const_cast<char*>(type_id<Pointee*>().name());
+            object_t.tp_name = type_id<Pointee>().name();
             if (PyType_Ready(&object_t) < 0)
             {
                 throw error_already_set();
@@ -240,7 +240,7 @@ namespace boost { namespace python {
         printf("calling buffer with a %s\n", typeid(other).name());
         if (object_t.tp_name == 0)
         {
-            object_t.tp_name = const_cast<char*>(type_id<Pointee*>().name());
+            object_t.tp_name = type_id<Pointee>().name();
             if (PyType_Ready(&object_t) < 0)
             {
                 throw error_already_set();

@@ -73,7 +73,7 @@ namespace BufferObjectExample {
 
         // This works nicely! Similar to registering one of the indexing_suite
         // classes.
-        boost::python::make_buffer_type_object<BufferObjectExample::Stream>();
+        boost::python::make_buffer_type_object<BufferObjectExample::Stream>("Buffer");
 
         // Expose Foo object.
         //
