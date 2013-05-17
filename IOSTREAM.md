@@ -59,13 +59,24 @@ your buffer object
 
 [test_iostreams.cpp] demonstrates how to wrap `std::istringstream`,
 `std::ostringstream` and `std::stringstream`, and classes derived from them.
-For completeness, and because I should also run some tests on them, this is how
-one could expose `std::fstream`:-
+For completeness, and because I should also run some tests on them, I've also
+written an example module showing how to wrap `std::fstream`. See the file
+[src/tests/test_fstream.cpp] showing how this is done, and the file
+tests/test_fstream.py to see example usage from Python.
 
-```cpp
-#include 
-```
+## TODO
+
+1. Make sure inheritance works properly for the object instance methods. This
+   impacts a couple of things:-
+  a. Intrinsic iostream methods, e.g. read() and write(), should be made
+     available on the Python side. I have attempted to expose these within
+     `iostream_base::extension_def`, but these methods don't appear anywhere!
+  b. Classes derived from an iostream-like class and exposed to Python
+     using bases<...> should include instance methods exposed in the derived
+     class. Currently, those extra methods are added to the class object, but
+     not to the class instances, which is where they should be.
 
 [Boost Python]: http://www.boost.org/doc/libs/1_53_0/libs/python/doc/index.html
 [test_iostreams.cpp]: ./src/tests/test_iostreams.cpp
+[test_fstream.cpp]: ./src/tests/test_fstream.cpp
 [Python-C API]: http://docs.python.org/2/c-api/
